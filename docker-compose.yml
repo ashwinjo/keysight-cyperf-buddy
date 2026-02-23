@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: cyperf_db_dev
+    environment:
+      POSTGRES_USER: cyperf_dev
+      POSTGRES_PASSWORD: cyperf_dev_password
+      POSTGRES_DB: cyperf_cve_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyperf_dev"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - cyperf_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: cyperf_cache_dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - cyperf_network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cyperf_api_dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://cyperf_dev:cyperf_dev_password@postgres:5432/cyperf_cve_dev
+      REDIS_URL: redis://redis:6379/0
+      NVD_API_KEY: ${NVD_API_KEY}
+      CYPERF_CONTROLLER_IP: ${CYPERF_CONTROLLER_IP}
+      CYPERF_USERNAME: ${CYPERF_USERNAME}
+      CYPERF_PASSWORD: ${CYPERF_PASSWORD}
+      CYPERF_SYNC_INTERVAL_HOURS: 24
+      LOG_LEVEL: INFO
+      ENVIRONMENT: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - cyperf_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  cyperf_network:
+    driver: bridge
