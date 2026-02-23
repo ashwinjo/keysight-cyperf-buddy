@@ -1,0 +1,56 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "cyperf-cve-tracker-backend"
+version = "0.1.0"
+description = "FastAPI backend for Cyperf CVE Tracker"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    {name = "Cyperf CVE Tracker Team"}
+]
+
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.30.0",
+    "sqlalchemy[asyncio]==2.0.25",
+    "alembic==1.13.1",
+    "pydantic==2.6.0",
+    "pydantic-settings==2.1.0",
+    "python-dotenv==1.0.0",
+    "redis[asyncio]==5.0.1",
+    "httpx==0.26.0",
+    "psycopg[asyncio]==3.1.15",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==7.4.4",
+    "pytest-asyncio==0.23.2",
+    "ruff==0.4.0",
+    "mypy==1.9.0",
+]
+
+[tool.uv]
+python-version = "3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
