@@ -97,39 +97,39 @@ Explicitly excluded. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Which phases cover which requirements. Updated after roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEARCH-01 | — | Pending |
-| SEARCH-02 | — | Pending |
-| SEARCH-03 | — | Pending |
-| SEARCH-04 | — | Pending |
-| SEARCH-05 | — | Pending |
-| BROWSE-01 | — | Pending |
-| BROWSE-02 | — | Pending |
-| BROWSE-03 | — | Pending |
-| BROWSE-04 | — | Pending |
-| BATCH-01 | — | Pending |
-| BATCH-02 | — | Pending |
-| BATCH-03 | — | Pending |
-| BATCH-04 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| SYNC-01 | — | Pending |
-| SYNC-02 | — | Pending |
-| SYNC-03 | — | Pending |
-| SYNC-04 | — | Pending |
-| SYNC-05 | — | Pending |
+| SEARCH-01 | Phase 2 | Pending |
+| SEARCH-02 | Phase 2 | Pending |
+| SEARCH-03 | Phase 3 | Pending |
+| SEARCH-04 | Phase 3 | Pending |
+| SEARCH-05 | Phase 2 | Pending |
+| BROWSE-01 | Phase 2 | Pending |
+| BROWSE-02 | Phase 2 | Pending |
+| BROWSE-03 | Phase 4 | Pending |
+| BROWSE-04 | Phase 2 | Pending |
+| BATCH-01 | Phase 5 | Pending |
+| BATCH-02 | Phase 5 | Pending |
+| BATCH-03 | Phase 5 | Pending |
+| BATCH-04 | Phase 5 | Pending |
+| UI-01 | Phase 4 | Pending |
+| UI-02 | Phase 4 | Pending |
+| UI-03 | Phase 4 | Pending |
+| UI-04 | Phase 4 | Pending |
+| SYNC-01 | Phase 2 | Pending |
+| SYNC-02 | Phase 3 | Pending |
+| SYNC-03 | Phase 4 | Pending |
+| SYNC-04 | Phase 4 | Pending |
+| SYNC-05 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0 ✓
 
 ---
 
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after v1 scope definition*
+*Last updated: 2026-02-22 after roadmap creation (traceability populated)*
