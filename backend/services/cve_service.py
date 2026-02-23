@@ -15,6 +15,7 @@ Architecture:
 import json
 import logging
 import re
+from datetime import datetime
 
 from fastapi import BackgroundTasks
 from rapidfuzz import fuzz, process
@@ -287,8 +288,17 @@ async def _upsert_cve(cve_data: dict, db: AsyncSession) -> None:
 
     Uses merge pattern (compatible with both SQLite and PostgreSQL via SQLAlchemy 2.0).
     references field is JSON-encoded for the TEXT DB column.
+    Converts published_date ISO string to datetime object for DateTime column.
     """
     references_json = json.dumps(cve_data.get("reference_urls", []))
+
+    # Convert published_date from ISO string to datetime if present
+    published_date = None
+    if cve_data.get("published_date"):
+        try:
+            published_date = datetime.fromisoformat(cve_data["published_date"])
+        except (ValueError, TypeError):
+            published_date = None
 
     existing = await db.get(CVE, cve_data["id"])
     if existing is None:
@@ -296,7 +306,7 @@ async def _upsert_cve(cve_data: dict, db: AsyncSession) -> None:
             CVE(
                 id=cve_data["id"],
                 description=cve_data.get("description"),
-                published_date=cve_data.get("published_date"),
+                published_date=published_date,
                 cvss_v3_score=cve_data.get("cvss_v3_score"),
                 cvss_v3_severity=cve_data.get("cvss_v3_severity"),
                 cvss_v3_vector=cve_data.get("cvss_v3_vector"),
@@ -309,7 +319,7 @@ async def _upsert_cve(cve_data: dict, db: AsyncSession) -> None:
     else:
         # Update all fields except id and first_seen
         existing.description = cve_data.get("description")
-        existing.published_date = cve_data.get("published_date")
+        existing.published_date = published_date
         existing.cvss_v3_score = cve_data.get("cvss_v3_score")
         existing.cvss_v3_severity = cve_data.get("cvss_v3_severity")
         existing.cvss_v3_vector = cve_data.get("cvss_v3_vector")

@@ -27,7 +27,7 @@ router = APIRouter(prefix="/cve", tags=["cve"])
 
 # Input validation constants
 _VALID_CVE_QUERY_PATTERN = re.compile(
-    r"^CVE-\d{4}-\d{1,7}(\*)?$",
+    r"^CVE-\d{4}-(\d{1,7}|\*)$",
     re.IGNORECASE,
 )
 _VALID_SEVERITIES = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
@@ -119,7 +119,10 @@ async def search_cve(
         background_tasks=background_tasks,
     )
 
-    if not results and search_type == "exact":
+    # Return 404 only if:
+    # - search_type is "exact" (direct ID lookup)
+    # - no results AND no severity filter (if severity is applied, CVE may exist but not match severity)
+    if not results and search_type == "exact" and not severity:
         raise HTTPException(
             status_code=404,
             detail=ErrorResponse(
