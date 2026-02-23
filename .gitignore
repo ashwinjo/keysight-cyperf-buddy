@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.egg-info/
+*.pyc
+*.pyo
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.venv
+venv/
+ENV/
+env/
+
+# Secrets
+.secrets
+.secrets.baseline
+.detectsecrets.baseline
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log
+package-lock.json
+dist/
+.parcel-cache/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Misc
+.coverage
+htmlcov/
+.hypothesis/
