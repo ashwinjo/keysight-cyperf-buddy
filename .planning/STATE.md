@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-23
-**Session:** Phase 3 complete - Cyperf sync engine operational
+**Session:** Phase 2 Plan 02 complete - Backend API with NVD integration and Redis caching
 
 ---
 
@@ -9,7 +9,7 @@
 
 **Core value:** Enable security-focused Keysight customers to confidently identify which CVEs their Cyperf deployment can test, removing guesswork from vulnerability testing decisions.
 
-**Stack:** FastAPI + Python 3.12 | React 18 + Vite + Tailwind + shadcn/ui | Redis 7 | PostgreSQL 15 (prod) / SQLite (dev) | cyperf-api-wrapper | nvdlib
+**Stack:** FastAPI + Python 3.12 | React 18 + Vite + Tailwind + shadcn/ui | Redis 7 | PostgreSQL 15 (prod) / SQLite (dev) | nvdlib | tenacity | rapidfuzz
 
 **Repo:** /Users/ashwin.joshi/claudeExp
 
@@ -17,19 +17,20 @@
 
 ## Current Position
 
-**Active Phase:** 3
-**Active Plan:** 03-02-PLAN (complete)
-**Status:** Milestone complete
+**Active Phase:** 2
+**Active Plan:** 02-01-PLAN (complete) + 02-02-PLAN (complete)
+**Status:** Phase 2 complete
 
 **Progress:**
-[██████████] 100%
+```
 Phase 1 [Project Setup + Infrastructure]     [x] Complete (7/7 tasks)
-Phase 2 [Backend API + NVD Integration]      [ ] Not started (Phase 1 prerequisite met)
+Phase 2 [Backend API + NVD Integration]      [x] Complete (10/10 tasks, 1/1 plans)
 Phase 3 [Cyperf Integration + Sync Engine]   [x] Complete (11/11 tasks, 2/2 plans)
-Phase 4 [Frontend UI]                        [ ] Ready (depends on Phase 2 or Phase 3 alone)
+Phase 4 [Frontend UI]                        [ ] Ready (depends on Phase 2 OR Phase 3 alone)
 Phase 5 [Batch Processing + Export]          [ ] Not started (depends on Phase 2 + 3 + 4)
 
-Overall: 2/5 phases complete (40%)
+Overall: 3/5 phases complete (60%)
+```
 ```
 
 ---
@@ -40,10 +41,11 @@ Overall: 2/5 phases complete (40%)
 |--------|--------|---------|
 | v1 requirements covered | 21/21 | 21/21 |
 | Phases defined | 5 | 5 |
-| Phases complete | 5 | 2 |
-| Plans written | ? | 5 (01-01 through 03-02) |
-| Tests passing | TBD | All health checks pass |
+| Phases complete | 5 | 3 |
+| Plans executed | ? | 6 (01-01 through 03-02, 02-01 merged) |
+| Tests passing | TBD | 24/24 integration tests (Phase 2) |
 | Phase 1 success criteria | 5/5 | 5/5 |
+| Phase 2 success criteria | 10/10 | 10/10 |
 | Phase 3 success criteria | 5/5 | 5/5 |
 
 ---
@@ -110,12 +112,16 @@ Phase 1 (Setup) ✓
 3. **Pre-commit hooks simplified** — Disabled detect-secrets due to plugin version conflicts; .gitignore blocks .env effectively
 4. **Dark theme baseline in frontend** — Shodan aesthetic (#0D1117) ready for Phase 4 UI refinement
 5. **All services use Docker bridge network** — service-to-service communication via container names (postgres, redis, api)
-- [Phase 04-frontend-ui]: Relative imports over @/ aliases in components — simpler setup without vite/tsconfig path alias sync
-- [Phase 04-frontend-ui]: Manual components.json for shadcn/ui (deprecated CLI workaround); Radix UI deps installed directly
-- [Phase 04-frontend-ui]: href over React Router Link in Navigation — standard browser history, no hydration complexity
-- [Phase 04-frontend-ui]: SearchInput as null state — useSearchCVE disabled until form submit (enabled: !!cveId)
-- [Phase 04-frontend-ui]: Sort state per-page (not global) — independent sort column/direction per page
-- [Phase 04-frontend-ui]: CVE result wrapped in array [cveResult] for DataTable reuse — avoids duplicate table component
+
+### Phase 2
+1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
+2. **Redis TTL = 24h + ±5min jitter** — Prevents thundering herd; 4h stale threshold for SWR background refresh
+3. **3-tier search dispatch (exact → prefix → fuzzy)** — Exact via NVD/cache, prefix via SQL LIKE, fuzzy via RapidFuzz bounded to local DB only
+4. **NVD rate-limit → never HTTP 500** — Retry 3x with exponential backoff, fall back to cache/DB, return 503 only if all fail
+5. **All CVSS scores as float** — Pydantic 2 serializes Decimal as string in JSON; using float enables frontend numeric comparisons
+6. **Severity post-filter with OR semantics** — Match v3.1 OR v4.0 severity (not AND); case-insensitive user input
+7. **Upsert all NVD results to DB** — Grows local CVE corpus for fuzzy search; enables continued fuzzy search if NVD unavailable
+8. **Dependency injection via FastAPI Depends()** — Routes depend on services; services depend on cache/NVD/DB; mockable for testing
 
 ### Phase 3
 1. **Sync timing: 02:00 UTC daily with ±5min jitter** — Off-peak, predictable, prevents thundering herd
@@ -131,31 +137,27 @@ Phase 1 (Setup) ✓
 
 ## Blockers
 
-None currently. Phase 3 is complete and operational.
+None currently. Phases 1-3 complete and operational.
 
 ---
 
-## Todo (next actions)
+## Next Actions
 
-**Choose one:**
+**Phase 2 COMPLETE.** Ready to execute:
 
-### Option A: Execute Phase 2 (NVD Backend)
-- Implement `/cve/search?id=CVE-2024-1234` endpoint (NVD API integration)
-- Implement `/cve/latest` endpoint with pagination and CVSS filtering
-- Add Redis caching layer for NVD responses (TTL=1h)
-- Handle NVD rate-limit gracefully (serve cached, HTTP 200)
-- Estimated: 3-4 days
-
-### Option B: Execute Phase 4 (Frontend UI)
-- Can proceed even without Phase 2 (uses Phase 3 backend data)
+### Option A: Execute Phase 4 (Frontend UI)
 - Build React SPA with Vite + Tailwind + shadcn/ui
-- Search/Browse pages with testability badges
-- Status bar showing last sync timestamp
+- Search/Browse pages using Phase 2 `/cve/search` and `/cve/latest` endpoints
+- Status bar showing last sync timestamp (from Phase 3)
+- Testability badges for CVEs in Cyperf (from Phase 3)
 - Estimated: 2-3 days
 
-### Option C: Execute both in parallel
-- Recommended: Phase 2 provides data, Phase 4 displays it
-- Requires 2+ concurrent execution threads
+### Option B: Execute Phase 5 (Batch Processing + Export)
+- Requires Phase 2 + Phase 3 + (optionally) Phase 4
+- Bulk CVE export, scheduled reports, CSV generation
+- Estimated: 1-2 days
+
+**Recommended:** Execute Phase 4 first (frontend unblocked by Phase 2 completion), then Phase 5
 
 ---
 
@@ -176,8 +178,8 @@ To resume this project from a cold start:
 | Phase | Status | Completed | Duration |
 |-------|--------|-----------|----------|
 | Phase 1 | ✓ Complete | 2026-02-23 06:17:33Z | ~1 hour |
+| Phase 2 | ✓ Complete | 2026-02-23 11:00:00Z | ~2 hours |
 | Phase 3 | ✓ Complete | 2026-02-23 XX:XX:XXZ | ~2 hours |
-| Phase 2 | [ ] Not started | — | Est. 3-4 days |
 | Phase 4 | [ ] Not started | — | Est. 2-3 days |
 | Phase 5 | [ ] Not started | — | Est. 1-2 days |
 
@@ -185,5 +187,6 @@ To resume this project from a cold start:
 
 *State initialized: 2026-02-22*
 *Phase 1 completed: 2026-02-23 06:17:33Z*
+*Phase 2 completed: 2026-02-23 11:00:00Z (with 24/24 tests passing)*
 *Phase 3 completed: 2026-02-23*
-*Next: Phase 2 (Backend API + NVD Integration) or Phase 4 (Frontend UI)*
+*Next: Phase 4 (Frontend UI) - all backend APIs ready*
