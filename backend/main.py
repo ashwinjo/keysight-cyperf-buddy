@@ -3,67 +3,89 @@
 import logging
 from contextlib import asynccontextmanager
 
+import redis.asyncio as aioredis
 from fastapi import FastAPI
 
 from config import get_settings
+from dependencies import set_redis_client
 from routes.admin import router as admin_router
 from routes.cve import router as cve_router
 from routes.health import router as health_router
 from scheduler import set_scheduler, setup_scheduler
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load settings at module level (triggers credential validation)
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
-    """Application lifespan context manager.
+    """Application lifespan: initialize and teardown shared resources."""
+    redis_client: aioredis.Redis | None = None
 
-    Manages startup and shutdown of background services:
-    - APScheduler for Cyperf sync jobs
-    - Database connections
-    """
-    # Startup
-    scheduler = None
-
+    # Initialize Redis connection pool
     try:
-        logger.info("✓ Application startup")
+        redis_client = await aioredis.from_url(
+            settings.redis_url,
+            encoding="utf-8",
+            decode_responses=True,
+            max_connections=20,
+        )
+        await redis_client.ping()
+        set_redis_client(redis_client)
+        logger.info("Redis connection pool initialized: %s", settings.redis_url)
+    except Exception as exc:
+        logger.warning(
+            "Redis unavailable at startup: %s. Cache will be bypassed until Redis recovers.",
+            exc,
+        )
 
-        # Initialize and start Cyperf sync scheduler
+    # NVD API key presence check (non-fatal — rate limits apply without key)
+    if settings.nvd_api_key:
+        logger.info("NVD API key configured (100 req/min limit)")
+    else:
+        logger.warning(
+            "NVD_API_KEY not set — operating at 10 req/min NVD limit. "
+            "Set NVD_API_KEY in environment for production use."
+        )
+
+    # Initialize and start Cyperf sync scheduler
+    scheduler = None
+    try:
         scheduler = setup_scheduler(app, settings)
         scheduler.start()
         set_scheduler(scheduler)
-        logger.info("✓ Cyperf sync scheduler started (02:00 UTC, ±5min jitter)")
+        logger.info("Cyperf sync scheduler started (02:00 UTC, +/-5min jitter)")
+    except Exception as exc:
+        logger.error("Scheduler startup failed: %s; app continues with manual sync only", exc)
 
-    except Exception as e:
-        logger.error(f"Scheduler startup failed: {e}; app continues with manual sync only")
-
+    logger.info("Application startup complete")
     yield
 
-    # Shutdown
+    # Shutdown: stop scheduler
     try:
         if scheduler and scheduler.running:
             scheduler.shutdown(wait=True)
-            logger.info("✓ Scheduler shutdown complete")
-    except Exception as e:
-        logger.error(f"Scheduler shutdown error: {e}")
+            logger.info("Scheduler shutdown complete")
+    except Exception as exc:
+        logger.error("Scheduler shutdown error: %s", exc)
 
-    logger.info("✓ Application shutdown complete")
+    # Shutdown: close Redis connection pool
+    if redis_client:
+        await redis_client.aclose()
+        logger.info("Redis connection pool closed")
+
+    logger.info("Application shutdown complete")
 
 
-# Create FastAPI application
 app = FastAPI(
     title="Cyperf CVE Tracker API",
     description="Query CVE data and Cyperf testability status",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
-# Register routers
 app.include_router(health_router)
 app.include_router(cve_router)
 app.include_router(admin_router)
@@ -72,8 +94,4 @@ app.include_router(admin_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000)
