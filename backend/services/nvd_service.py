@@ -40,14 +40,16 @@ class NVDClient:
 
     def __init__(self, api_key: str | None = None) -> None:
         self._api_key = api_key
-        # nvdlib enforces these delays internally between paginated requests
-        self._delay: float = 0.6 if api_key else 6.0
+        # nvdlib enforces delays internally between paginated requests
+        # When using an API key, we can specify a custom delay; without a key, nvdlib uses 6s default
+        # DO NOT pass delay parameter when key is None - nvdlib will raise SyntaxError
+        self._delay: float | None = 0.6 if api_key else None
         if api_key:
-            logger.info("NVDClient initialized with API key (100 req/min limit)")
+            logger.info("NVDClient initialized with API key (100 req/min limit, 0.6s delay)")
         else:
-            logger.warning(
-                "NVDClient initialized without API key (10 req/min limit). "
-                "Set NVD_API_KEY for production use."
+            logger.info(
+                "NVDClient initialized without API key (10 req/min limit, 6.0s default delay). "
+                "Set NVD_API_KEY environment variable for production use."
             )
 
     async def fetch_cve(self, cve_id: str) -> object | None:
@@ -60,11 +62,11 @@ class NVDClient:
         logger.debug("Fetching CVE from NVD: %s", normalized_id)
 
         def _sync_fetch() -> list:
-            return nvdlib.searchCVE(
-                cveId=normalized_id,
-                key=self._api_key,
-                delay=self._delay,
-            )
+            # Only pass delay if we have an API key (nvdlib raises SyntaxError if delay without key)
+            kwargs = {"cveId": normalized_id, "key": self._api_key}
+            if self._delay is not None:
+                kwargs["delay"] = self._delay
+            return nvdlib.searchCVE(**kwargs)
 
         try:
             results = await asyncio.to_thread(_sync_fetch)
@@ -96,13 +98,13 @@ class NVDClient:
 
         def _sync_fetch() -> list:
             # searchCVE_V2 returns a generator; collect up to limit records
+            # Only pass delay if we have an API key (nvdlib raises SyntaxError if delay without key)
+            kwargs = {"pubStartDate": start, "pubEndDate": end, "key": self._api_key}
+            if self._delay is not None:
+                kwargs["delay"] = self._delay
+
             results = []
-            for cve in nvdlib.searchCVE_V2(
-                pubStartDate=start,
-                pubEndDate=end,
-                key=self._api_key,
-                delay=self._delay,
-            ):
+            for cve in nvdlib.searchCVE_V2(**kwargs):
                 results.append(cve)
                 if len(results) >= limit:
                     break

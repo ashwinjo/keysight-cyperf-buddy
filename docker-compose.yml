@@ -46,7 +46,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://cyperf_dev:cyperf_dev_password@postgres:5432/cyperf_cve_dev
       REDIS_URL: redis://redis:6379/0
-      NVD_API_KEY: ${NVD_API_KEY}
       CYPERF_CONTROLLER_IP: ${CYPERF_CONTROLLER_IP}
       CYPERF_USERNAME: ${CYPERF_USERNAME}
       CYPERF_PASSWORD: ${CYPERF_PASSWORD}
