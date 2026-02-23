@@ -37,7 +37,8 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 4. Redis is reachable from the API container; a health-check endpoint returns Redis status
 5. Pre-commit hooks reject commits that contain `.env` files or hardcoded credential patterns
 
-**Plans**: TBD
+**Plans**: 1 plan
+- [x] 01-PLAN.md — 7 tasks: Git setup, backend/frontend skeletons, Docker Compose, Alembic migrations, health checks, final verification
 
 ---
 
@@ -121,7 +122,7 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Setup + Infrastructure | 0/? | Not started | - |
+| 1. Project Setup + Infrastructure | 1/1 | Ready to Execute | - |
 | 2. Backend API + NVD Integration | 0/? | Not started | - |
 | 3. Cyperf Integration + Sync Engine | 0/? | Not started | - |
 | 4. Frontend UI | 0/? | Not started | - |
@@ -161,4 +162,4 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 ---
 
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-02-22 after initial roadmap creation*
+*Last updated: 2026-02-22 after Phase 1 planning complete*
