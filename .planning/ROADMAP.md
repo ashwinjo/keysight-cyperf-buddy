@@ -12,7 +12,7 @@
 
 - [x] **Phase 1: Project Setup + Infrastructure** - Scaffold project, configure secrets management, initialize database and Redis, establish dev tooling
 - [ ] **Phase 2: Backend API + NVD Integration** - FastAPI service with NVD query layer, caching, search and browse endpoints, rate-limit resilience
-- [ ] **Phase 3: Cyperf Integration + Sync Engine** - Connect cyperf-api-wrapper, implement background sync scheduler, compute CVE testability intersection
+- [x] **Phase 3: Cyperf Integration + Sync Engine** - Connect cyperf-api-wrapper, implement background sync scheduler, compute CVE testability intersection
 - [ ] **Phase 4: Frontend UI** - React SPA with dark Shodan aesthetic, search/browse pages, testability badges, column sorting, navigation
 - [ ] **Phase 5: Batch Processing + Export** - Async batch CVE import, results display, CSV export
 
@@ -77,8 +77,8 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 5. An environment variable controls the sync interval; the sync can also be triggered manually via `POST /admin/sync-cyperf` for development/testing purposes
 
 **Plans**: 2 plans
-- [ ] 03-01-PLAN.md — Cyperf API integration + scheduler setup (APScheduler, CyperfService, job initialization)
-- [ ] 03-02-PLAN.md — Sync logic + graceful degradation + admin endpoints (perform_sync, error handling, GET/POST /admin endpoints, search integration)
+- [x] 03-01-PLAN.md — Cyperf API integration + scheduler setup (APScheduler, CyperfService, job initialization)
+- [x] 03-02-PLAN.md — Sync logic + graceful degradation + admin endpoints (perform_sync, error handling, GET/POST /admin endpoints, search integration)
 
 ---
 
@@ -98,7 +98,9 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 5. A status bar on every page displays "Data last updated: X hours ago" reflecting the last successful Cyperf sync; if Cyperf data is stale (>25h), a warning banner appears at the top of the page
 6. The browse page has a toggle/filter control labeled "Testable with Cyperf" that, when activated, hides non-testable CVEs from the results table
 
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 04-01-PLAN.md — Shared components + navigation + status indicators (DataTable, Badge, Navigation, StatusBar, StaleDataWarning, API hooks, types)
+- [ ] 04-02-PLAN.md — Search page + Browse page + filtering (SearchPage, BrowsePage, SearchForm, TestableFilter)
 
 ---
 
@@ -127,7 +129,7 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 | 1. Project Setup + Infrastructure | 1/1 | Complete | 2026-02-23 |
 | 2. Backend API + NVD Integration | 0/? | Not started | - |
 | 3. Cyperf Integration + Sync Engine | 2/2 | Complete | 2026-02-23 |
-| 4. Frontend UI | 0/? | Not started | - |
+| 4. Frontend UI | 0/2 | Not started | - |
 | 5. Batch Processing + Export | 0/? | Not started | - |
 
 ---
@@ -164,6 +166,7 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 ---
 
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-02-23 after Phase 3 execution complete*
+*Last updated: 2026-02-23 after Phase 4 planning*
 *Phase 1 execution: 2026-02-23*
 *Phase 3 execution: 2026-02-23*
+*Phase 4 plans created: 2026-02-23*
