@@ -11,17 +11,17 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Search & Lookup
 
-- [ ] **SEARCH-01**: User can search for a CVE by exact ID (e.g., CVE-2024-1234)
-- [ ] **SEARCH-02**: Search results include CVE details (CVSS v3.1 + v4.0 scores, description, published date, references)
-- [ ] **SEARCH-03**: Each search result displays "Can be Tested" badge indicating Cyperf testability
-- [ ] **SEARCH-04**: Each search result displays the Cyperf Attack Profile name that covers this CVE
+- [x] **SEARCH-01**: User can search for a CVE by exact ID (e.g., CVE-2024-1234)
+- [x] **SEARCH-02**: Search results include CVE details (CVSS v3.1 + v4.0 scores, description, published date, references)
+- [x] **SEARCH-03**: Each search result displays "Can be Tested" badge indicating Cyperf testability
+- [x] **SEARCH-04**: Each search result displays the Cyperf Attack Profile name that covers this CVE
 - [ ] **SEARCH-05**: User can filter search results by CVSS severity (LOW, MEDIUM, HIGH, CRITICAL)
 
 ### Browse
 
 - [ ] **BROWSE-01**: User can view latest CVEs in a sortable, paginated table
 - [ ] **BROWSE-02**: Latest CVEs are sorted by published date (newest first)
-- [ ] **BROWSE-03**: User can filter browse results by "Can be Tested" status (testable / not testable)
+- [x] **BROWSE-03**: User can filter browse results by "Can be Tested" status (testable / not testable)
 - [ ] **BROWSE-04**: Each row in browse table shows CVE ID, CVSS score, published date, and testability status
 
 ### Batch Import & Processing
@@ -34,7 +34,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### User Interface
 
 - [x] **UI-01**: Application uses dark theme (Shodan.io aesthetic) with proper contrast (WCAG AA)
-- [ ] **UI-02**: All tables support sorting by column (CVE ID, CVSS, published date)
+- [x] **UI-02**: All tables support sorting by column (CVE ID, CVSS, published date)
 - [x] **UI-03**: Search, browse, and batch pages are accessible from main navigation
 - [x] **UI-04**: "Can be Tested" badge is visually prominent (green for testable, gray for not testable)
 
@@ -101,21 +101,21 @@ Which phases cover which requirements. Updated after roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEARCH-01 | Phase 2 | Pending |
-| SEARCH-02 | Phase 2 | Pending |
-| SEARCH-03 | Phase 3 | Pending |
-| SEARCH-04 | Phase 3 | Pending |
+| SEARCH-01 | Phase 2 | Complete |
+| SEARCH-02 | Phase 2 | Complete |
+| SEARCH-03 | Phase 3 | Complete |
+| SEARCH-04 | Phase 3 | Complete |
 | SEARCH-05 | Phase 2 | Pending |
 | BROWSE-01 | Phase 2 | Pending |
 | BROWSE-02 | Phase 2 | Pending |
-| BROWSE-03 | Phase 4 | Pending |
+| BROWSE-03 | Phase 4 | Complete |
 | BROWSE-04 | Phase 2 | Pending |
 | BATCH-01 | Phase 5 | Pending |
 | BATCH-02 | Phase 5 | Pending |
 | BATCH-03 | Phase 5 | Pending |
 | BATCH-04 | Phase 5 | Pending |
 | UI-01 | Phase 4 | Complete |
-| UI-02 | Phase 4 | Pending |
+| UI-02 | Phase 4 | Complete |
 | UI-03 | Phase 4 | Complete |
 | UI-04 | Phase 4 | Complete |
 | SYNC-01 | Phase 2 | Pending |

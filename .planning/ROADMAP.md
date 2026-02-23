@@ -13,7 +13,7 @@
 - [x] **Phase 1: Project Setup + Infrastructure** - Scaffold project, configure secrets management, initialize database and Redis, establish dev tooling
 - [ ] **Phase 2: Backend API + NVD Integration** - FastAPI service with NVD query layer, caching, search and browse endpoints, rate-limit resilience
 - [x] **Phase 3: Cyperf Integration + Sync Engine** - Connect cyperf-api-wrapper, implement background sync scheduler, compute CVE testability intersection
-- [ ] **Phase 4: Frontend UI** - React SPA with dark Shodan aesthetic, search/browse pages, testability badges, column sorting, navigation
+- [x] **Phase 4: Frontend UI** - React SPA with dark Shodan aesthetic, search/browse pages, testability badges, column sorting, navigation (completed 2026-02-23)
 - [ ] **Phase 5: Batch Processing + Export** - Async batch CVE import, results display, CSV export
 
 ---
@@ -129,7 +129,7 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 | 1. Project Setup + Infrastructure | 1/1 | Complete | 2026-02-23 |
 | 2. Backend API + NVD Integration | 0/? | Not started | - |
 | 3. Cyperf Integration + Sync Engine | 2/2 | Complete | 2026-02-23 |
-| 4. Frontend UI | 1/2 | In Progress|  |
+| 4. Frontend UI | 2/2 | Complete   | 2026-02-23 |
 | 5. Batch Processing + Export | 0/? | Not started | - |
 
 ---
