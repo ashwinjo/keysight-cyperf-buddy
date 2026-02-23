@@ -9,23 +9,33 @@
     "lint": "eslint src"
   },
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.1.15",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@tanstack/react-query": "^5.28.0",
+    "@tanstack/react-table": "^8.13.0",
+    "axios": "^1.6.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.575.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
-    "@tanstack/react-query": "^5.28.0",
-    "@tanstack/react-table": "^8.13.0",
-    "axios": "^1.6.2"
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "vite": "^5.0.8",
-    "typescript": "^5.3.3",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@vitejs/plugin-react": "^4.2.1",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.32",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.55.0",
-    "eslint-plugin-react": "^7.33.2"
+    "eslint-plugin-react": "^7.33.2",
+    "postcss": "^8.4.32",
+    "shadcn-ui": "^0.9.5",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
   }
 }
