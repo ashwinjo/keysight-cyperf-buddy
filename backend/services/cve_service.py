@@ -19,10 +19,11 @@ from datetime import datetime
 
 from fastapi import BackgroundTasks
 from rapidfuzz import fuzz, process
-from sqlalchemy import select
+from sqlalchemy import func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.cve import CVE
+from db.cyperf_mapping import CyperfSupportedCVE
 from services.cache_service import CVECacheService
 from services.nvd_service import (
     NVDClient,
@@ -153,14 +154,26 @@ async def get_latest_cves(
     except Exception as exc:
         logger.error("NVD fetch failed for /cve/latest: %s", exc, exc_info=True)
 
-    # Step 2: Query DB with pagination
+    # Step 2: Query DB with pagination (join with Cyperf for testable status)
     offset = (page - 1) * page_size
-    stmt = select(CVE).order_by(CVE.published_date.desc()).offset(offset).limit(page_size)
+    stmt = (
+        select(
+            CVE,
+            func.coalesce(CyperfSupportedCVE.attack_profile_name).label("cyperf_profile"),
+        )
+        .outerjoin(
+            CyperfSupportedCVE,
+            (CVE.id == CyperfSupportedCVE.cve_id) & not_(CyperfSupportedCVE.is_deprecated),
+        )
+        .order_by(CVE.published_date.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
     result = await db.execute(stmt)
-    db_cves = result.scalars().all()
+    rows = result.all()
 
-    # Step 3: Convert ORM objects to dicts
-    cve_list = [_orm_to_dict(c) for c in db_cves]
+    # Step 3: Convert ORM objects to dicts with Cyperf data
+    cve_list = [_orm_to_dict(row[0], cyperf_profile=row[1]) for row in rows]
 
     # Step 4: Apply severity filter (OR: v3.1 OR v4.0 match)
     if severity:
@@ -227,18 +240,30 @@ async def _search_by_prefix(
     db: AsyncSession,
     limit: int = 50,
 ) -> list[dict]:
-    """SQL LIKE search against CVE IDs in the local database.
+    """SQL LIKE search against CVE IDs in the local database with Cyperf testability.
 
     Translates * wildcards to SQL % wildcards.
     Only searches locally-cached CVEs, not NVD live.
+    Joins with cyperf_supported_cves to populate testable status.
     """
     sql_pattern = query.replace("*", "%")
+    # LEFT JOIN CVE with CyperfSupportedCVE to get testable status
     stmt = (
-        select(CVE).where(CVE.id.like(sql_pattern)).order_by(CVE.published_date.desc()).limit(limit)
+        select(
+            CVE,
+            func.coalesce(CyperfSupportedCVE.attack_profile_name).label("cyperf_profile"),
+        )
+        .outerjoin(
+            CyperfSupportedCVE,
+            (CVE.id == CyperfSupportedCVE.cve_id) & not_(CyperfSupportedCVE.is_deprecated),
+        )
+        .where(CVE.id.like(sql_pattern))
+        .order_by(CVE.published_date.desc())
+        .limit(limit)
     )
     result = await db.execute(stmt)
-    db_cves = result.scalars().all()
-    return [_orm_to_dict(c) for c in db_cves]
+    rows = result.all()
+    return [_orm_to_dict(row[0], cyperf_profile=row[1]) for row in rows]
 
 
 async def _fuzzy_search_ids(
@@ -330,16 +355,32 @@ async def _upsert_cve(cve_data: dict, db: AsyncSession) -> None:
 
 
 async def _get_from_db(cve_id: str, db: AsyncSession) -> dict | None:
-    """Last-resort fallback: query DB for CVE. Used when NVD is unreachable.
+    """Last-resort fallback: query DB for CVE with Cyperf testability data.
 
-    Returns dict or None if not in DB.
+    Returns dict or None if not in DB. Joins with cyperf_supported_cves to get testable status.
     """
     db_cve = await db.get(CVE, cve_id)
-    return _orm_to_dict(db_cve) if db_cve else None
+    if not db_cve:
+        return None
+
+    # Fetch Cyperf mapping (if CVE is testable)
+    cyperf_stmt = select(CyperfSupportedCVE.attack_profile_name).where(
+        CyperfSupportedCVE.cve_id == cve_id,
+        not_(CyperfSupportedCVE.is_deprecated),
+    )
+    cyperf_result = await db.execute(cyperf_stmt)
+    cyperf_profile = cyperf_result.scalar_one_or_none()
+
+    return _orm_to_dict(db_cve, cyperf_profile=cyperf_profile)
 
 
-def _orm_to_dict(cve: CVE) -> dict:
-    """Convert CVE ORM object to application dict schema."""
+def _orm_to_dict(cve: CVE, cyperf_profile: str | None = None) -> dict:
+    """Convert CVE ORM object to application dict schema.
+
+    Args:
+        cve: CVE ORM object
+        cyperf_profile: Attack profile name from cyperf_supported_cves table (if testable)
+    """
     reference_urls: list[str] = []
     if cve.references:
         try:
@@ -365,5 +406,6 @@ def _orm_to_dict(cve: CVE) -> dict:
         "cvss_v4_severity": cve.cvss_v4_severity,
         "cvss_v4_vector": cve.cvss_v4_vector,
         "reference_urls": reference_urls,
-        "testable": None,  # Phase 3 populates from cyperf_supported_cves join
+        "testable": cyperf_profile is not None,  # true if profile exists, false otherwise
+        "attack_profile": cyperf_profile,  # Profile name from Cyperf sync, null if not testable
     }
