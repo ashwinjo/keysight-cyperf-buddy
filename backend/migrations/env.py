@@ -1,4 +1,5 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -64,8 +65,14 @@ async def run_async_migrations() -> None:
 
     """
 
+    # Get database URL from environment variable
+    configuration = config.get_section(config.config_ini_section, {})
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        configuration["sqlalchemy.url"] = db_url
+
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
