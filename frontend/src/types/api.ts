@@ -1,3 +1,15 @@
+/**
+ * TypeScript types for Cyperf CVE Tracker API responses.
+ *
+ * These types mirror the Pydantic models defined in the Phase 3 FastAPI backend.
+ * Keep in sync with: backend/app/schemas.py
+ *
+ * API endpoints:
+ *   GET /cve/search?id=CVE-XXXX → CVEResponse
+ *   GET /cve/latest              → BrowseListResponse
+ *   GET /admin/sync-status       → SyncStatusResponse
+ */
+
 // CVE data structures (match Phase 3 backend responses)
 export interface CVEResponse {
   id: string;                      // CVE-XXXX-XXXXX
@@ -6,8 +18,8 @@ export interface CVEResponse {
   description: string;
   published_date: string;          // ISO 8601
   references: string[];
-  testable: boolean;               // From Cyperf sync
-  attack_profile: string | null;
+  testable: boolean;               // Set by Cyperf sync job
+  attack_profile: string | null;  // Cyperf attack profile name, if testable
 }
 
 export interface BrowseListResponse {
@@ -25,8 +37,9 @@ export interface SyncStatusResponse {
   error_message: string | null;
 }
 
-// Table column sorting
+// Table column sorting — used by DataTable and page components
 export type SortDirection = 'asc' | 'desc' | null;
+
 export interface SortState {
   column: 'cve_id' | 'cvss' | 'published_date' | null;
   direction: SortDirection;

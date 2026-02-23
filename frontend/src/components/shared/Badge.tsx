@@ -1,3 +1,9 @@
+/**
+ * Badge component for CVE testability status display.
+ *
+ * Renders a pill-shaped badge indicating whether Cyperf can test a given CVE.
+ * Green for testable, gray for non-testable — matches Phase 4 design contract.
+ */
 export interface BadgeProps {
   testable: boolean;
 }
