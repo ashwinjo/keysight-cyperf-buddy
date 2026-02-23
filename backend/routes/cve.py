@@ -1,112 +1,180 @@
-"""CVE search and browse endpoints."""
+"""CVE search and browse endpoints.
+
+Covers:
+  SEARCH-01: Search by exact CVE ID
+  SEARCH-02: Results include CVSS v3.1, v4.0, description, published date, references
+  SEARCH-05: Filter by CVSS severity
+  BROWSE-01: Paginated latest CVE table
+  BROWSE-02: Sorted by published date (newest first)
+  BROWSE-04: Row includes CVE ID, CVSS score, published date, testability (None in Phase 2)
+"""
 
 import logging
+import re
 
-from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from db.cyperf_mapping import CyperfSupportedCVE
-from models import CVEResponse
+from dependencies import get_cache_service, get_nvd_client
+from models.cve import CVEDetail, CVELatestResponse, CVESearchResponse, ErrorResponse
+from services.cache_service import CVECacheService
+from services.cve_service import get_latest_cves, search_cves
+from services.nvd_service import NVDClient
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/cve", tags=["cve"])
 
-
-async def get_cyperf_testability(session: AsyncSession, cve_id: str) -> tuple[bool, str | None]:
-    """Check if CVE is testable with Cyperf and get profile name.
-
-    Args:
-        session: AsyncSession for database queries
-        cve_id: CVE identifier (e.g. CVE-2024-1234)
-
-    Returns:
-        Tuple of (testable: bool, attack_profile: Optional[str])
-        Returns (False, None) if CVE not testable or database error
-    """
-    try:
-        stmt = select(CyperfSupportedCVE).where(CyperfSupportedCVE.cve_id == cve_id)
-        result = await session.execute(stmt)
-        record = result.scalars().first()
-
-        if record:
-            return (True, record.attack_profile_name)
-        return (False, None)
-
-    except Exception as e:
-        # Log error but don't fail the request
-        logger.warning(f"Error checking testability for {cve_id}: {e}")
-        return (False, None)
+# Input validation constants
+_VALID_CVE_QUERY_PATTERN = re.compile(
+    r"^CVE-\d{4}-\d{1,7}(\*)?$",
+    re.IGNORECASE,
+)
+_VALID_SEVERITIES = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
 
 
-@router.get("/search")
-async def search_cve(
-    id: str = Query(..., description="CVE ID (e.g. CVE-2024-1234)"),
-    session: AsyncSession = None,
-) -> CVEResponse:
-    """Search for CVE by exact ID.
-
-    Returns CVE details from NVD including CVSS scores, description, and references.
-    Also includes testability status from Cyperf sync.
-
-    Phase 2 implements NVD integration; Phase 3 adds testability fields.
-
-    Query Parameters:
-        id: CVE identifier (required)
-
-    Returns:
-        CVEResponse with NVD data + testability fields
-
-    Raises:
-        HTTPException 404: If CVE not found in NVD
-        HTTPException 500: Unexpected errors
-
-    Note:
-        This is a stub pending Phase 2 NVD integration.
-        Testability fields (testable, attack_profile) are phase 3 additions.
-    """
-    if not session:
-        async for s in get_db():
-            session = s
-            break
-
-    try:
-        # PHASE 2: Query NVD cache for CVE details
-        # TODO: Implement NVD query logic in Phase 2
-        # For now, return stub response with testability fields
-
-        # PHASE 3: Query Cyperf testability
-        testable, profile = await get_cyperf_testability(session, id)
-
-        # Return minimal response with testability
-        # Phase 2 will populate NVD fields
-        return CVEResponse(
-            id=id,
-            description="[NVD data pending Phase 2]",
-            published_date=None,
-            last_modified=None,
-            cvss_v3_vector=None,
-            cvss_v3_score=None,
-            cvss_v3_severity=None,
-            cvss_v4_vector=None,
-            cvss_v4_score=None,
-            cvss_v4_severity=None,
-            references=None,
-            testable=testable,
-            attack_profile=profile,
-        )
-
-    except Exception as e:
-        logger.error(f"Error searching for CVE {id}: {e}")
+def _validate_cve_id(
+    id: str = Query(
+        ...,
+        description="CVE ID (e.g. CVE-2024-1234) or prefix (e.g. CVE-2024-*)",
+        min_length=3,
+        max_length=30,
+    ),
+) -> str:
+    """Normalize and validate CVE ID query parameter."""
+    normalized = id.upper().strip()
+    if not _VALID_CVE_QUERY_PATTERN.match(normalized):
         raise HTTPException(
-            status_code=500,
-            detail=f"Search failed: {str(e)}",
+            status_code=422,
+            detail=ErrorResponse(
+                error="INVALID_CVE_QUERY",
+                message=(
+                    f"'{id}' is not a valid CVE query. "
+                    "Expected format: CVE-YYYY-NNNNN or CVE-YYYY-* (wildcard prefix)"
+                ),
+            ).model_dump(),
+        )
+    return normalized
+
+
+def _validate_severity(
+    severity: str | None = Query(
+        None,
+        description="Filter by CVSS severity: LOW | MEDIUM | HIGH | CRITICAL (case-insensitive)",
+    ),
+) -> str | None:
+    """Normalize and validate severity filter."""
+    if severity is None:
+        return None
+    normalized = severity.upper().strip()
+    if normalized not in _VALID_SEVERITIES:
+        raise HTTPException(
+            status_code=422,
+            detail=ErrorResponse(
+                error="INVALID_SEVERITY",
+                message=(
+                    f"'{severity}' is not a valid severity. "
+                    f"Must be one of: {', '.join(sorted(_VALID_SEVERITIES))}"
+                ),
+            ).model_dump(),
+        )
+    return normalized
+
+
+@router.get(
+    "/search",
+    response_model=CVESearchResponse,
+    summary="Search CVE by ID (exact, prefix, or fuzzy)",
+    responses={
+        404: {"description": "CVE not found in NVD or local cache"},
+        422: {"description": "Invalid CVE ID format or severity value"},
+        503: {"description": "NVD API unreachable and no cached data available"},
+    },
+)
+async def search_cve(
+    id: str = Depends(_validate_cve_id),
+    severity: str | None = Depends(_validate_severity),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    cache: CVECacheService = Depends(get_cache_service),
+    nvd: NVDClient = Depends(get_nvd_client),
+    db: AsyncSession = Depends(get_db),
+) -> CVESearchResponse:
+    """Search for CVEs by ID with optional severity filter.
+
+    - Exact match: `GET /cve/search?id=CVE-2024-1234`
+    - Prefix/wildcard: `GET /cve/search?id=CVE-2024-*`
+    - Combined filter: `GET /cve/search?id=CVE-2024-*&severity=HIGH`
+
+    Exact ID queries check Redis cache first; NVD is queried only on cache miss.
+    Prefix and fuzzy queries search locally-cached CVEs only.
+
+    On NVD rate-limit: serves cached data with HTTP 200 (never HTTP 500).
+    """
+    results, search_type = await search_cves(
+        query=id,
+        severity=severity,
+        cache=cache,
+        nvd=nvd,
+        db=db,
+        background_tasks=background_tasks,
+    )
+
+    if not results and search_type == "exact":
+        raise HTTPException(
+            status_code=404,
+            detail=ErrorResponse(
+                error="CVE_NOT_FOUND",
+                message=f"CVE '{id}' not found in NVD or local cache",
+            ).model_dump(),
         )
 
+    return CVESearchResponse(
+        results=[CVEDetail(**r) for r in results],
+        total=len(results),
+        query=id,
+        search_type=search_type,
+    )
 
-@router.get("/latest")
-async def get_latest_cves() -> dict:
-    """Get latest CVEs (stub for Phase 2)."""
-    return {"status": "coming in phase 2"}
+
+@router.get(
+    "/latest",
+    response_model=CVELatestResponse,
+    summary="Browse latest CVEs sorted by published date",
+    responses={
+        422: {"description": "Invalid page/limit/severity parameter"},
+    },
+)
+async def get_latest(
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(50, ge=1, le=500, description="Results per page (default: 50, max: 500)"),
+    severity: str | None = Depends(_validate_severity),
+    nvd: NVDClient = Depends(get_nvd_client),
+    cache: CVECacheService = Depends(get_cache_service),
+    db: AsyncSession = Depends(get_db),
+) -> CVELatestResponse:
+    """Return paginated list of recent CVEs sorted by published date (newest first).
+
+    - Default: 50 results, page 1
+    - Filter: `GET /cve/latest?severity=HIGH`
+    - Pagination: `GET /cve/latest?page=2&limit=100`
+
+    NVD is queried for fresh data on each call; responses are cached individually.
+    On NVD failure, serves from local DB cache without error.
+    Severity filter applies to CVSS v3.1 OR v4.0 (whichever is present).
+    """
+    cve_list, page_total = await get_latest_cves(
+        page=page,
+        page_size=limit,
+        severity=severity,
+        nvd=nvd,
+        db=db,
+        cache=cache,
+    )
+
+    return CVELatestResponse(
+        results=[CVEDetail(**c) for c in cve_list],
+        total=page_total,
+        page=page,
+        page_size=limit,
+        severity_filter=severity,
+    )
