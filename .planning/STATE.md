@@ -22,7 +22,7 @@
 **Status:** Phase 3 complete; Ready for Phase 2 or Phase 4
 
 **Progress:**
-```
+[████████░░] 83%
 Phase 1 [Project Setup + Infrastructure]     [x] Complete (7/7 tasks)
 Phase 2 [Backend API + NVD Integration]      [ ] Not started (Phase 1 prerequisite met)
 Phase 3 [Cyperf Integration + Sync Engine]   [x] Complete (11/11 tasks, 2/2 plans)
@@ -47,6 +47,7 @@ Overall: 2/5 phases complete (40%)
 | Phase 3 success criteria | 5/5 | 5/5 |
 
 ---
+| Phase 04-frontend-ui P01 | 6 | 9 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,9 @@ Phase 1 (Setup) ✓
 3. **Pre-commit hooks simplified** — Disabled detect-secrets due to plugin version conflicts; .gitignore blocks .env effectively
 4. **Dark theme baseline in frontend** — Shodan aesthetic (#0D1117) ready for Phase 4 UI refinement
 5. **All services use Docker bridge network** — service-to-service communication via container names (postgres, redis, api)
+- [Phase 04-frontend-ui]: Relative imports over @/ aliases in components — simpler setup without vite/tsconfig path alias sync
+- [Phase 04-frontend-ui]: Manual components.json for shadcn/ui (deprecated CLI workaround); Radix UI deps installed directly
+- [Phase 04-frontend-ui]: href over React Router Link in Navigation — standard browser history, no hydration complexity
 
 ### Phase 3
 1. **Sync timing: 02:00 UTC daily with ±5min jitter** — Off-peak, predictable, prevents thundering herd

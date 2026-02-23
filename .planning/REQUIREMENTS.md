@@ -33,17 +33,17 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### User Interface
 
-- [ ] **UI-01**: Application uses dark theme (Shodan.io aesthetic) with proper contrast (WCAG AA)
+- [x] **UI-01**: Application uses dark theme (Shodan.io aesthetic) with proper contrast (WCAG AA)
 - [ ] **UI-02**: All tables support sorting by column (CVE ID, CVSS, published date)
-- [ ] **UI-03**: Search, browse, and batch pages are accessible from main navigation
-- [ ] **UI-04**: "Can be Tested" badge is visually prominent (green for testable, gray for not testable)
+- [x] **UI-03**: Search, browse, and batch pages are accessible from main navigation
+- [x] **UI-04**: "Can be Tested" badge is visually prominent (green for testable, gray for not testable)
 
 ### Data Sync & Reliability
 
 - [ ] **SYNC-01**: CVE data from NVD API is cached for performance
 - [ ] **SYNC-02**: Cyperf supported CVEs are synced from Cyperf Controller daily (background job)
-- [ ] **SYNC-03**: Last sync timestamp is displayed on UI ("Data last updated: X hours ago")
-- [ ] **SYNC-04**: If Cyperf is unreachable, app serves last-known data with warning banner
+- [x] **SYNC-03**: Last sync timestamp is displayed on UI ("Data last updated: X hours ago")
+- [x] **SYNC-04**: If Cyperf is unreachable, app serves last-known data with warning banner
 - [ ] **SYNC-05**: If NVD API is rate-limited, app serves cached result gracefully (no 500 error)
 
 ---
@@ -114,14 +114,14 @@ Which phases cover which requirements. Updated after roadmap creation.
 | BATCH-02 | Phase 5 | Pending |
 | BATCH-03 | Phase 5 | Pending |
 | BATCH-04 | Phase 5 | Pending |
-| UI-01 | Phase 4 | Pending |
+| UI-01 | Phase 4 | Complete |
 | UI-02 | Phase 4 | Pending |
-| UI-03 | Phase 4 | Pending |
-| UI-04 | Phase 4 | Pending |
+| UI-03 | Phase 4 | Complete |
+| UI-04 | Phase 4 | Complete |
 | SYNC-01 | Phase 2 | Pending |
 | SYNC-02 | Phase 3 | Pending |
-| SYNC-03 | Phase 4 | Pending |
-| SYNC-04 | Phase 4 | Pending |
+| SYNC-03 | Phase 4 | Complete |
+| SYNC-04 | Phase 4 | Complete |
 | SYNC-05 | Phase 2 | Pending |
 
 **Coverage:**
