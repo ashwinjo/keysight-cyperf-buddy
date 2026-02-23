@@ -26,6 +26,11 @@ class CVEResponse(BaseModel):
 
     references: str | None = Field(None, description="JSON array of reference URLs")
 
+    testable: bool = Field(False, description="Whether CVE can be tested with Cyperf")
+    attack_profile: str | None = Field(
+        None, description="Cyperf Attack Profile name that covers this CVE"
+    )
+
     class Config:
         """Pydantic config."""
 
@@ -52,15 +57,21 @@ class CyperfMappingResponse(BaseModel):
 class SyncStatusResponse(BaseModel):
     """Sync metadata and status response."""
 
-    job_name: str = Field(..., description="Name of sync job (e.g. 'cyperf_profiles')")
-    last_run_at: datetime | None = Field(None, description="When job last ran")
-    last_completed_at: datetime | None = Field(
-        None, description="When job last completed successfully"
+    last_successful_sync: str | None = Field(
+        None, description="ISO 8601 datetime of last successful sync"
     )
-    status: str | None = Field(None, description="Status of last run (success, failure, running)")
+    last_attempted_sync: str | None = Field(
+        None, description="ISO 8601 datetime of last sync attempt"
+    )
+    sync_status: str | None = Field(
+        None, description="Status of last run (success, failed, running, never)"
+    )
+    cverf_profiles_synced: int | None = Field(None, description="Number of profiles synced")
+    cverf_cves_extracted: int | None = Field(None, description="Number of CVEs extracted")
     error_message: str | None = Field(None, description="Error message if last run failed")
-    profiles_synced: int | None = Field(None, description="Number of profiles synced")
-    next_scheduled_run: datetime | None = Field(None, description="When next sync is scheduled")
+    next_scheduled_sync: str | None = Field(
+        None, description="ISO 8601 datetime of next scheduled sync"
+    )
 
     class Config:
         """Pydantic config."""

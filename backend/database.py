@@ -45,3 +45,19 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             yield session
         finally:
             await session.close()
+
+
+async def get_db_session() -> AsyncSession:
+    """Get a new database session for background jobs.
+
+    Unlike get_db() which is a dependency (yields), this returns a session
+    directly for use in background jobs like Cyperf sync.
+
+    Returns:
+        AsyncSession: New database session (caller must close)
+
+    Note:
+        Caller is responsible for closing the session. Typically used in
+        try/finally blocks in background job functions.
+    """
+    return AsyncSessionLocal()

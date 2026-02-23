@@ -6,9 +6,11 @@ from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import Settings, get_settings
-from services.cyperf_service import CyperfService
+from database import get_db_session
+from services.sync_service import perform_sync
 
 logger = logging.getLogger(__name__)
 
@@ -75,44 +77,37 @@ async def sync_cyperf_job(app: FastAPI, settings: Settings) -> None:
     """Background job function for syncing Cyperf profiles.
 
     This function is called on schedule by APScheduler. It orchestrates the
-    Cyperf sync process: initializing the service, fetching profiles, extracting
-    CVEs, and preparing for database recording.
-
-    In Plan 2, this will be expanded to call perform_sync() for full database
-    recording and graceful degradation.
+    complete sync cycle:
+    1. Creates database session
+    2. Calls perform_sync() for full sync with retry and graceful degradation
+    3. Records results in sync_metadata
+    4. Closes session
 
     Args:
         app: FastAPI application instance
         settings: Application settings
 
     Note:
-        This is a stub implementation in Plan 01. Plan 02 expands this to call
-        perform_sync() for full sync orchestration with database recording.
+        Error handling is comprehensive: all Cyperf and database errors are
+        caught and recorded gracefully. The job never raises exceptions.
     """
     start_time = datetime.utcnow()
     logger.info("✓ Cyperf sync job started (scheduled: 02:00 UTC, ±5min jitter)")
 
-    try:
-        # Initialize Cyperf service with credentials from settings
-        cyperf_service = CyperfService(
-            controller_ip=settings.cyperf_controller_ip,
-            username=settings.cyperf_username,
-            password=settings.cyperf_password,
-        )
+    session: AsyncSession | None = None
 
-        # Call sync_cyperf_cves to fetch profiles and extract CVEs
-        # In Plan 01, we test that the service works; Plan 02 adds database recording
-        result = await cyperf_service.sync_cyperf_cves()
+    try:
+        # Create database session for this sync job
+        session = await get_db_session()
+
+        # Call perform_sync with full orchestration:
+        # - Retry logic (immediate + 5s delay)
+        # - Graceful degradation (log failure, retain previous data)
+        # - Database recording (sync_metadata)
+        await perform_sync(session=session, settings=settings)
 
         duration = (datetime.utcnow() - start_time).total_seconds()
-
-        if result.error:
-            logger.error(f"Cyperf sync failed: {result.error} (duration: {duration:.2f}s)")
-        else:
-            logger.info(
-                f"✓ Cyperf sync job completed: {result.profiles_fetched} profiles, "
-                f"{result.cves_extracted} CVEs (duration: {duration:.2f}s)"
-            )
+        logger.info(f"✓ Cyperf sync job completed (duration: {duration:.2f}s)")
 
     except Exception as e:
         # Log error but don't re-raise; let scheduler continue
@@ -120,6 +115,14 @@ async def sync_cyperf_job(app: FastAPI, settings: Settings) -> None:
         logger.error(
             f"Cyperf sync job failed with exception: {type(e).__name__}: {e} (duration: {duration:.2f}s)"
         )
+
+    finally:
+        # Ensure session is closed
+        if session:
+            try:
+                await session.close()
+            except Exception as e:
+                logger.warning(f"Error closing database session: {e}")
 
 
 def trigger_cyperf_sync_now(scheduler: AsyncIOScheduler | None = None) -> None:
