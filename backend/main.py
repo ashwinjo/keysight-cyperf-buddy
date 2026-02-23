@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from config import get_settings
+from routes.health import router as health_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,12 +34,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
-# Health check endpoint (will be expanded in Task 1.6)
-@app.get("/health")
-async def health_check() -> dict:
-    """Basic liveness check."""
-    return {"status": "ok"}
+# Register routers
+app.include_router(health_router)
 
 
 if __name__ == "__main__":
