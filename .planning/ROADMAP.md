@@ -76,7 +76,9 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 4. When the Cyperf Controller is unreachable during a scheduled sync, the job logs the failure and retains the previous sync's data without corrupting the database; no user-facing error occurs
 5. An environment variable controls the sync interval; the sync can also be triggered manually via `POST /admin/sync-cyperf` for development/testing purposes
 
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 03-01-PLAN.md — Cyperf API integration + scheduler setup (APScheduler, CyperfService, job initialization)
+- [ ] 03-02-PLAN.md — Sync logic + graceful degradation + admin endpoints (perform_sync, error handling, GET/POST /admin endpoints, search integration)
 
 ---
 
@@ -124,7 +126,7 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 |-------|----------------|--------|-----------|
 | 1. Project Setup + Infrastructure | 1/1 | Complete | 2026-02-23 |
 | 2. Backend API + NVD Integration | 0/? | Not started | - |
-| 3. Cyperf Integration + Sync Engine | 0/? | Not started | - |
+| 3. Cyperf Integration + Sync Engine | 2/2 | Planning complete | 2026-02-23 |
 | 4. Frontend UI | 0/? | Not started | - |
 | 5. Batch Processing + Export | 0/? | Not started | - |
 
@@ -162,4 +164,4 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 ---
 
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-02-22 after Phase 1 planning complete*
+*Last updated: 2026-02-23 after Phase 3 planning complete*
