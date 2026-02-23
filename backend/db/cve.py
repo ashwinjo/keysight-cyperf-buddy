@@ -42,8 +42,8 @@ class CVE(Base):
 
     # Indexes for common queries
     __table_args__ = (
-        Index("idx_cve_published", "published_date", comment="Index for sorting by date"),
-        Index("idx_cve_severity", "cvss_v3_severity", comment="Index for severity filtering"),
+        Index("idx_cve_published", "published_date"),
+        Index("idx_cve_severity", "cvss_v3_severity"),
     )
 
     def __repr__(self) -> str:

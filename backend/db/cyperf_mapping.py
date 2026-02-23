@@ -50,8 +50,8 @@ class CyperfSupportedCVE(Base):
 
     # Indexes
     __table_args__ = (
-        Index("idx_cyperf_cve", "cve_id", comment="Index for CVE lookups"),
-        Index("idx_cyperf_profile", "attack_profile_name", comment="Index for profile lookups"),
+        Index("idx_cyperf_cve", "cve_id"),
+        Index("idx_cyperf_profile", "attack_profile_name"),
     )
 
     def __repr__(self) -> str:

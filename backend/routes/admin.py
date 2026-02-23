@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.get("/sync-status")
-async def get_sync_status(session: AsyncSession = None) -> SyncStatusResponse:
+async def get_sync_status(session: AsyncSession = Depends(get_db)) -> SyncStatusResponse:
     """Get current Cyperf sync status and metadata.
 
     Returns detailed information about the last sync attempt, including:
@@ -39,12 +39,6 @@ async def get_sync_status(session: AsyncSession = None) -> SyncStatusResponse:
 
         Authentication: TODO - Add auth middleware in Phase 4
     """
-    if not session:
-        # Get session from dependency if not provided
-        async for s in get_db():
-            session = s
-            break
-
     try:
         # Query for cyperf_profiles sync metadata
         metadata = await SyncMetadata.get_last_sync_status(session, job_name="cyperf_profiles")
@@ -99,7 +93,7 @@ async def get_sync_status(session: AsyncSession = None) -> SyncStatusResponse:
 
 
 @router.post("/sync-cyperf")
-async def trigger_manual_sync(session: AsyncSession = None) -> dict:
+async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
     """Trigger an immediate Cyperf sync (manual trigger for testing/emergency).
 
     Queues an immediate one-time sync job outside the normal 24-hour schedule.
@@ -117,11 +111,6 @@ async def trigger_manual_sync(session: AsyncSession = None) -> dict:
 
         Authentication: TODO - Add auth middleware in Phase 4
     """
-    if not session:
-        async for s in get_db():
-            session = s
-            break
-
     try:
         settings = get_settings()
 
