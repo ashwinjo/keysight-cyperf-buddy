@@ -14,7 +14,9 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { CVEResponse, SyncStatusResponse, BrowseListResponse } from '../types/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Use /api proxy (configured in vite.config.ts to proxy to http://localhost:8000)
+// This avoids CORS issues when running in the browser
+const API_BASE = '/api';
 
 // Hook 1: Fetch single CVE by ID
 // Only fires when cveId is non-null (enabled: !!cveId)
@@ -22,10 +24,25 @@ export const useSearchCVE = (cveId: string | null) => {
   return useQuery({
     queryKey: ['cve', 'search', cveId],
     queryFn: async () => {
-      const res = await axios.get<CVEResponse>(`${API_BASE}/cve/search`, {
+      const res = await axios.get<any>(`${API_BASE}/cve/search`, {
         params: { id: cveId }
       });
-      return res.data;
+      // Backend returns { results: [...], total, query, search_type }
+      // Extract the first result and normalize field names
+      if (res.data.results && res.data.results.length > 0) {
+        const backendCve = res.data.results[0];
+        return {
+          id: backendCve.id,
+          cvss_v3_1_score: backendCve.cvss_v3_score,
+          cvss_v4_0_score: backendCve.cvss_v4_score,
+          description: backendCve.description,
+          published_date: backendCve.published_date,
+          references: backendCve.reference_urls || [],
+          testable: backendCve.testable,
+          attack_profile: backendCve.attack_profile,
+        };
+      }
+      return null;
     },
     enabled: !!cveId,
     staleTime: 1000 * 60 * 5,  // 5 minutes — CVE data is stable
@@ -38,10 +55,27 @@ export const useLatestCVEs = (page = 1, pageSize = 25, onlyTestable = false) => 
   return useQuery({
     queryKey: ['cve', 'latest', page, pageSize, onlyTestable],
     queryFn: async () => {
-      const res = await axios.get<BrowseListResponse>(`${API_BASE}/cve/latest`, {
+      const res = await axios.get<any>(`${API_BASE}/cve/latest`, {
         params: { page, page_size: pageSize, only_testable: onlyTestable }
       });
-      return res.data;
+      // Normalize backend response to match CVEResponse[] interface
+      const normalizedCves = (res.data.cves || []).map((backendCve: any) => ({
+        id: backendCve.id,
+        cvss_v3_1_score: backendCve.cvss_v3_score,
+        cvss_v4_0_score: backendCve.cvss_v4_score,
+        description: backendCve.description,
+        published_date: backendCve.published_date,
+        references: backendCve.reference_urls || [],
+        testable: backendCve.testable,
+        attack_profile: backendCve.attack_profile,
+      }));
+      return {
+        cves: normalizedCves,
+        total: res.data.total,
+        page: res.data.page,
+        page_size: res.data.page_size,
+        has_next: res.data.has_next,
+      };
     },
     staleTime: 1000 * 60 * 5,  // 5 minutes
   });
