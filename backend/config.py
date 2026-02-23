@@ -35,7 +35,9 @@ class Settings(BaseSettings):
     cyperf_password: str
 
     # Sync configuration
-    cyperf_sync_interval_hours: int = 24
+    cyperf_sync_interval_hours: int = (
+        24  # Interval in hours between Cyperf syncs (default: 24 = daily)
+    )
 
     class Config:
         """Pydantic settings configuration."""
@@ -65,6 +67,7 @@ class Settings(BaseSettings):
         logger.info(f"✓ Database URL: {self.database_url}")
         logger.info(f"✓ Redis URL: {self.redis_url}")
         logger.info(f"✓ Cyperf Controller: {self.cyperf_controller_ip}")
+        logger.info(f"✓ Cyperf sync interval: {self.cyperf_sync_interval_hours} hours")
         logger.info("✓ All required credentials configured")
 
 
