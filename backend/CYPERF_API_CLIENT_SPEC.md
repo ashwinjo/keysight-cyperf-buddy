@@ -504,4 +504,3 @@ A: No. It always fetches fresh data. The sync service handles caching
 - **Issues:** Report bugs on GitHub Issues
 - **Docs:** Full API documentation in package README
 - **License:** Apache 2.0 (assumed; adjust as needed)
-

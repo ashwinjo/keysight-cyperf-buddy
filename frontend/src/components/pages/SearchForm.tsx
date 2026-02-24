@@ -34,8 +34,8 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6">
-      <div className="flex gap-2">
+    <form onSubmit={handleSubmit} className="card-luxury">
+      <div className="flex gap-4">
         <input
           type="text"
           placeholder="e.g., CVE-2024-1234"
@@ -44,18 +44,22 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
             setInput(e.target.value);
             if (error) setError('');
           }}
-          className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="input-luxury flex-1"
           disabled={isLoading}
         />
         <button
           type="submit"
           disabled={isLoading}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white font-medium rounded transition"
+          className="btn-luxury-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Searching...' : 'Search'}
         </button>
       </div>
-      {error && <p className="mt-2 text-red-400 text-sm">{error}</p>}
+      {error && (
+        <p className="mt-4 text-sm text-red-400 font-medium tracking-tight px-4 py-3 bg-red-900/20 border border-red-900/50 rounded">
+          ⚠ {error}
+        </p>
+      )}
     </form>
   );
 }

@@ -764,9 +764,9 @@ function cmdHistoryDigest(cwd, raw) {
         try {
           const content = fs.readFileSync(path.join(dirPath, summary), 'utf-8');
           const fm = extractFrontmatter(content);
-          
+
           const phaseNum = fm.phase || dir.split('-')[0];
-          
+
           if (!digest.phases[phaseNum]) {
             digest.phases[phaseNum] = {
               name: fm.name || dir.split('-').slice(1).join(' ') || 'Unknown',
@@ -1107,7 +1107,7 @@ function cmdStateGet(cwd, section, raw) {
   const statePath = path.join(cwd, '.planning', 'STATE.md');
   try {
     const content = fs.readFileSync(statePath, 'utf-8');
-    
+
     if (!section) {
       output({ content }, raw, content);
       return;
@@ -1115,7 +1115,7 @@ function cmdStateGet(cwd, section, raw) {
 
     // Try to find markdown section or field
     const fieldEscaped = section.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    
+
     // Check for **field:** value
     const fieldPattern = new RegExp(`\\*\\*${fieldEscaped}:\\*\\*\\s*(.*)`, 'i');
     const fieldMatch = content.match(fieldPattern);
@@ -1147,7 +1147,7 @@ function cmdStatePatch(cwd, patches, raw) {
     for (const [field, value] of Object.entries(patches)) {
       const fieldEscaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const pattern = new RegExp(`(\\*\\*${fieldEscaped}:\\*\\*\\s*)(.*)`, 'i');
-      
+
       if (pattern.test(content)) {
         content = content.replace(pattern, `$1${value}`);
         results.updated.push(field);
@@ -1640,14 +1640,14 @@ function cmdTemplateSelect(cwd, planPath, raw) {
   try {
     const fullPath = path.join(cwd, planPath);
     const content = fs.readFileSync(fullPath, 'utf-8');
-    
+
     // Simple heuristics
     const taskMatch = content.match(/###\s*Task\s*\d+/g) || [];
     const taskCount = taskMatch.length;
-    
+
     const decisionMatch = content.match(/decision/gi) || [];
     const hasDecisions = decisionMatch.length > 0;
-    
+
     // Count file mentions
     const fileMentions = new Set();
     const filePattern = /`([^`]+\.[a-zA-Z]+)`/g;

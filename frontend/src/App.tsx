@@ -14,10 +14,10 @@ export default function App(): React.ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <div className="flex flex-col min-h-screen bg-dark-900">
+        <div className="flex flex-col min-h-screen bg-luxury-bg text-luxury-text">
           <Navigation />
           <StaleDataWarning />
-          <main className="flex-1 mx-auto max-w-7xl w-full p-6">
+          <main className="flex-1 mx-auto max-w-7xl w-full px-8 py-8">
             <Routes>
               <Route path="/" element={<SearchPage />} />
               <Route path="/browse" element={<BrowsePage />} />

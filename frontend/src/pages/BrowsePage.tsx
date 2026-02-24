@@ -40,29 +40,44 @@ export default function BrowsePage() {
   };
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-white mb-6">Browse All CVEs & Cyperf Strikes</h1>
+    <div className="space-y-8 animate-in">
+      <div>
+        <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
+          Browse CVEs
+        </h1>
+        <p className="text-luxury-text-secondary tracking-tight">
+          Explore the complete CVE database with Cyperf testability status
+        </p>
+      </div>
 
-      <div className="mb-6 p-4 bg-gray-900 border border-gray-700 rounded space-y-4">
+      <div className="card-luxury space-y-5">
         {/* Search Input */}
         <div>
-          <label className="block text-sm font-semibold text-gray-300 mb-2">
-            Search by CVE ID or Strike Name
+          <label className="block text-sm font-semibold text-luxury-text mb-3 tracking-tight">
+            Search by CVE ID or Test Profile
           </label>
           <input
             type="text"
             placeholder="e.g., CVE-2023-26360 or nginx"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition"
+            className="input-luxury w-full"
           />
         </div>
 
         {/* Stats */}
-        <p className="text-xs text-gray-400">
-          Total CVEs in database: <span className="font-semibold text-white">{tableData.length}</span>
-          {searchInput && ` • Matching your search: ${filteredData.length}`}
-        </p>
+        <div className="flex items-center gap-6 text-xs tracking-tight border-t border-luxury-border pt-4">
+          <div>
+            <p className="text-luxury-text-secondary uppercase tracking-luxury mb-1">Total CVEs</p>
+            <p className="text-lg font-semibold text-luxury-accent">{tableData.length}</p>
+          </div>
+          {searchInput && (
+            <div>
+              <p className="text-luxury-text-secondary uppercase tracking-luxury mb-1">Matching Results</p>
+              <p className="text-lg font-semibold text-luxury-text">{filteredData.length}</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <DataTable

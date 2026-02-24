@@ -5,14 +5,16 @@ interface TestableFilterProps {
 
 export default function TestableFilter({ checked, onChange }: TestableFilterProps) {
   return (
-    <label className="flex items-center gap-2 mb-4 cursor-pointer">
+    <label className="flex items-center gap-3 cursor-pointer group">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="w-4 h-4 rounded bg-gray-800 border border-gray-700 cursor-pointer accent-blue-600"
+        className="w-5 h-5 rounded bg-luxury-bg-subtle border border-luxury-border cursor-pointer accent-luxury-accent transition-all hover:border-luxury-accent"
       />
-      <span className="text-gray-300 font-medium">Testable with Cyperf</span>
+      <span className="text-luxury-text font-semibold text-sm tracking-tight group-hover:text-luxury-accent transition-colors">
+        Testable with Cyperf
+      </span>
     </label>
   );
 }

@@ -1,10 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #0D1117;
-  color: #c9d1d9;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Menlo, Monaco,
-    "Courier New", monospace;
+@layer base {
+  body {
+    @apply bg-luxury-bg text-luxury-text font-sans;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-luxury;
+  }
+}
+
+@layer components {
+  .btn-luxury-primary {
+    @apply px-6 py-3 bg-luxury-accent text-luxury-bg font-medium tracking-luxury uppercase text-xs
+           transition-all duration-200 hover:bg-luxury-accent-alt active:scale-95 shadow-elegant;
+  }
+
+  .btn-luxury-secondary {
+    @apply px-6 py-3 bg-luxury-bg-subtle border border-luxury-border text-luxury-text font-medium
+           tracking-luxury uppercase text-xs transition-all duration-200 hover:border-luxury-accent
+           hover:text-luxury-accent shadow-elegant;
+  }
+
+  .input-luxury {
+    @apply bg-luxury-bg-subtle border border-luxury-border text-luxury-text placeholder:text-luxury-text-secondary
+           px-4 py-3 tracking-tight transition-all duration-200 focus:border-luxury-accent focus:ring-1
+           focus:ring-luxury-accent focus:outline-none;
+  }
+
+  .card-luxury {
+    @apply bg-luxury-bg-subtle border border-luxury-border rounded-lg p-6 shadow-elegant
+           transition-all duration-300 hover:shadow-elegant-lg hover:border-luxury-accent;
+  }
+
+  .divider-luxury {
+    @apply border-t border-luxury-border;
+  }
+}
+
+/* Refined animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: fadeInUp 0.4s ease-out;
 }

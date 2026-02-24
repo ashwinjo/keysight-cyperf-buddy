@@ -19,75 +19,80 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
   };
 
   if (isLoading) {
-    return <div className="p-4 text-center text-gray-400">Loading CVEs...</div>;
+    return <div className="p-8 text-center text-luxury-text-secondary">Loading CVEs...</div>;
   }
 
   if (data.length === 0) {
-    return <div className="p-4 text-center text-gray-400">No CVEs found</div>;
+    return <div className="p-8 text-center text-luxury-text-secondary">No CVEs found</div>;
   }
 
   return (
-    <div className="overflow-x-auto border border-gray-700 rounded">
+    <div className="card-luxury overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-dark-950 border-b border-gray-700">
+        <thead className="bg-luxury-bg border-b border-luxury-border">
           <tr>
             <th
               onClick={() => handleHeaderClick('cve_id')}
-              className="px-4 py-2 text-left font-semibold text-gray-300 cursor-pointer hover:bg-gray-800 transition"
+              className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase cursor-pointer hover:bg-luxury-bg-subtle transition"
             >
-              CVE ID
-              {getSortIcon('cve_id')}
+              CVE ID {getSortIcon('cve_id')}
             </th>
-            <th className="px-4 py-2 text-left font-semibold text-gray-300">
+            <th className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase">
               CNA
             </th>
             <th
               onClick={() => handleHeaderClick('cvss')}
-              className="px-4 py-2 text-left font-semibold text-gray-300 cursor-pointer hover:bg-gray-800 transition"
+              className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase cursor-pointer hover:bg-luxury-bg-subtle transition"
             >
-              CVSS Score
-              {getSortIcon('cvss')}
+              CVSS Score {getSortIcon('cvss')}
             </th>
             <th
               onClick={() => handleHeaderClick('published_date')}
-              className="px-4 py-2 text-left font-semibold text-gray-300 cursor-pointer hover:bg-gray-800 transition"
+              className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase cursor-pointer hover:bg-luxury-bg-subtle transition"
             >
-              Published
-              {getSortIcon('published_date')}
+              Published {getSortIcon('published_date')}
             </th>
-            <th className="px-4 py-2 text-left font-semibold text-gray-300">
-              Can Cyperf Test?
+            <th className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase">
+              Testable
             </th>
-            <th className="px-4 py-2 text-left font-semibold text-gray-300">
-              Cyperf Strikes
+            <th className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase">
+              Cyperf Profiles
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-luxury-border">
           {data.map((cve) => (
-            <tr key={cve.id} className="border-b border-gray-700 hover:bg-gray-900 transition">
-              <td className="px-4 py-2 font-mono text-gray-200">{cve.id}</td>
-              <td className="px-4 py-2 text-gray-300 text-sm">
-                {cve.cna ? <span className="text-blue-400">{cve.cna}</span> : <span className="text-gray-500">—</span>}
+            <tr key={cve.id} className="hover:bg-luxury-bg transition-colors duration-150">
+              <td className="px-6 py-4 font-mono text-luxury-accent text-xs">{cve.id}</td>
+              <td className="px-6 py-4 text-luxury-text text-sm">
+                {cve.cna ? (
+                  <span className="font-semibold text-luxury-text-secondary">{cve.cna}</span>
+                ) : (
+                  <span className="text-luxury-text-secondary/60">—</span>
+                )}
               </td>
-              <td className="px-4 py-2 text-gray-300">{cve.cvss_v3_1_score}</td>
-              <td className="px-4 py-2 text-gray-400">
+              <td className="px-6 py-4 text-luxury-text font-semibold">
+                <span className="inline-block px-3 py-1 bg-luxury-bg rounded border border-luxury-border/50">
+                  {cve.cvss_v3_1_score}
+                </span>
+              </td>
+              <td className="px-6 py-4 text-luxury-text-secondary text-sm">
                 {new Date(cve.published_date).toLocaleDateString()}
               </td>
-              <td className="px-4 py-2">
+              <td className="px-6 py-4">
                 <Badge testable={cve.testable} />
               </td>
-              <td className="px-4 py-2 text-gray-400 text-xs max-w-xs">
+              <td className="px-6 py-4 text-luxury-text text-xs max-w-xs">
                 {cve.attack_profiles && cve.attack_profiles.length > 0 ? (
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-wrap gap-2">
                     {cve.attack_profiles.map((profile, idx) => (
-                      <span key={idx} className="block bg-gray-800 px-2 py-1 rounded text-gray-300">
+                      <span key={idx} className="inline-block bg-luxury-bg px-2.5 py-1.5 rounded border border-luxury-border/50 text-luxury-text-secondary hover:text-luxury-text transition">
                         {profile}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <span className="text-gray-500">—</span>
+                  <span className="text-luxury-text-secondary/60">—</span>
                 )}
               </td>
             </tr>

@@ -1,12 +1,8 @@
 /**
- * Navigation component — persistent top nav bar with active page detection.
+ * Navigation component — premium luxury styling for CVE2Strike.
  *
- * Uses React Router v6 useLocation() to detect current path and apply
- * Keysight blue underline + white text to the active nav item.
- * Sticky positioning ensures nav remains visible during scroll.
- *
- * Browser back/forward works correctly because href links use React Router
- * history under the hood via BrowserRouter in App.tsx.
+ * Refined aesthetic with elegant typography, gold accents, and sophisticated
+ * spacing. Uses display font for brand, subtle animations on interactions.
  */
 import { useLocation } from 'react-router-dom';
 
@@ -27,28 +23,32 @@ export default function Navigation() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-700 bg-dark-950">
-      <div className="mx-auto max-w-7xl px-6 py-4">
-        <div className="flex items-center gap-12">
-          {/* Brand name */}
+    <nav className="sticky top-0 z-50 bg-luxury-bg border-b border-luxury-border shadow-elegant">
+      <div className="mx-auto max-w-7xl px-8 py-6">
+        <div className="flex items-baseline gap-16">
+          {/* Brand name — elegant serif display */}
           <a
             href="/"
-            className="text-2xl font-bold text-white hover:text-blue-400 transition-colors whitespace-nowrap"
+            className="font-display text-3xl font-bold text-luxury-accent tracking-luxury whitespace-nowrap
+                       transition-all duration-300 hover:text-luxury-accent-alt"
           >
-            CVE2Strike
+            CVE²Strike
           </a>
 
           {/* Navigation menu */}
-          <div className="flex gap-8">
+          <div className="flex gap-10">
             {NAV_ITEMS.map(({ path, label }) => (
               <a
                 key={path}
                 href={path}
-                className={`text-sm font-medium transition-colors ${
-                  isActive(path)
-                    ? 'text-white border-b-2 border-blue-500'
-                    : 'text-gray-400 hover:text-gray-200 border-b-2 border-transparent'
-                }`}
+                className={`text-sm font-semibold tracking-luxury uppercase transition-all duration-200 relative
+                  after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0
+                  after:bg-luxury-accent after:transition-all after:duration-300
+                  ${
+                    isActive(path)
+                      ? 'text-luxury-accent after:w-full'
+                      : 'text-luxury-text-secondary hover:text-luxury-text'
+                  }`}
               >
                 {label}
               </a>

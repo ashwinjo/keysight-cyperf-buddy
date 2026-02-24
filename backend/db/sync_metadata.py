@@ -80,13 +80,25 @@ class SyncMetadata(Base):
         Raises:
             Any SQLAlchemy exceptions during insert/update
         """
-        record = cls(
-            job_name=job_name,
-            last_run_at=datetime.utcnow(),
-            status="running",
-        )
-        merged = await session.merge(record)
-        return merged
+        # Fetch existing record if it exists
+        stmt = select(cls).where(cls.job_name == job_name)
+        result = await session.execute(stmt)
+        record = result.scalars().first()
+
+        if not record:
+            # Create new record
+            record = cls(
+                job_name=job_name,
+                last_run_at=datetime.utcnow(),
+                status="running",
+            )
+            session.add(record)
+        else:
+            # Update existing record
+            record.last_run_at = datetime.utcnow()
+            record.status = "running"
+
+        return record
 
     @classmethod
     async def record_sync_complete(

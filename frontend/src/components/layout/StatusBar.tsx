@@ -29,10 +29,10 @@ export default function StatusBar() {
     : 'Data status: never synced';
 
   return (
-    <footer className="mt-12 border-t border-gray-700 bg-dark-950 py-4 text-xs text-gray-500">
-      <div className="mx-auto max-w-7xl px-6 flex justify-between">
-        <span>{lastUpdateText}</span>
-        <span>Cyperf CVE Tracker v0.1</span>
+    <footer className="mt-16 border-t border-luxury-border bg-luxury-bg py-6 text-xs text-luxury-text-secondary shadow-elegant">
+      <div className="mx-auto max-w-7xl px-8 flex justify-between items-center">
+        <span className="tracking-tight">{lastUpdateText}</span>
+        <span className="text-luxury-accent/70 font-display text-sm">CVE²Strike v0.1</span>
       </div>
     </footer>
   );

@@ -41,7 +41,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Data Sync & Reliability
 
 - [ ] **SYNC-01**: CVE data from NVD API is cached for performance
-- [ ] **SYNC-02**: Cyperf supported CVEs are synced from Cyperf Controller daily (background job)
+- [x] **SYNC-02**: Cyperf supported CVEs are synced from Cyperf Controller daily (background job)
 - [x] **SYNC-03**: Last sync timestamp is displayed on UI ("Data last updated: X hours ago")
 - [x] **SYNC-04**: If Cyperf is unreachable, app serves last-known data with warning banner
 - [ ] **SYNC-05**: If NVD API is rate-limited, app serves cached result gracefully (no 500 error)
@@ -119,7 +119,7 @@ Which phases cover which requirements. Updated after roadmap creation.
 | UI-03 | Phase 4 | Complete |
 | UI-04 | Phase 4 | Complete |
 | SYNC-01 | Phase 2 | Pending |
-| SYNC-02 | Phase 3 | Pending |
+| SYNC-02 | Phase 3 | Complete |
 | SYNC-03 | Phase 4 | Complete |
 | SYNC-04 | Phase 4 | Complete |
 | SYNC-05 | Phase 2 | Pending |

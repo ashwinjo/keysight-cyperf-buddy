@@ -46,9 +46,9 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://cyperf_dev:cyperf_dev_password@postgres:5432/cyperf_cve_dev
       REDIS_URL: redis://redis:6379/0
-      CYPERF_CONTROLLER_IP: ${CYPERF_CONTROLLER_IP}
-      CYPERF_USERNAME: ${CYPERF_USERNAME}
-      CYPERF_PASSWORD: ${CYPERF_PASSWORD}
+      CYPERF_CONTROLLER_IP: 52.32.20.150
+      CYPERF_USERNAME: admin
+      CYPERF_PASSWORD: CyPerf&Keysight#1
       CYPERF_SYNC_INTERVAL_HOURS: 24
       LOG_LEVEL: INFO
       ENVIRONMENT: development

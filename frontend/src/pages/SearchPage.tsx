@@ -28,8 +28,15 @@ export default function SearchPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-white mb-6">Search CVEs</h1>
+    <div className="space-y-8 animate-in">
+      <div>
+        <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
+          Search CVEs
+        </h1>
+        <p className="text-luxury-text-secondary tracking-tight">
+          Find CVEs by ID and explore vulnerability details
+        </p>
+      </div>
 
       <SearchForm
         onSearch={setSearchInput}
@@ -37,8 +44,9 @@ export default function SearchPage() {
       />
 
       {searchInput && (
-        <div className="mb-4 p-3 bg-gray-800 border border-gray-700 rounded text-gray-300 text-sm">
-          Searching for: <span className="font-mono font-semibold">{searchInput}</span>
+        <div className="p-4 bg-luxury-bg-subtle border border-luxury-accent/30 rounded-lg text-luxury-text-secondary text-sm space-y-1 shadow-elegant">
+          <p className="text-xs tracking-luxury uppercase text-luxury-accent/70">Searching for</p>
+          <p className="font-mono font-semibold text-luxury-accent">{searchInput}</p>
         </div>
       )}
 
@@ -50,29 +58,64 @@ export default function SearchPage() {
       />
 
       {cveResult && (
-        <div className="mt-6 p-4 bg-gray-900 border border-gray-700 rounded">
-          <h2 className="text-lg font-semibold text-white mb-2">Details</h2>
-          <div className="space-y-2 text-sm text-gray-300">
-            <p><strong>CNA:</strong> {cveResult.cna ? <span className="text-blue-400">{cveResult.cna}</span> : <span className="text-gray-500">Not specified</span>}</p>
-            <p><strong>Description:</strong> {cveResult.description}</p>
-            <p><strong>CVSS v3.1:</strong> {cveResult.cvss_v3_1_score}</p>
-            {cveResult.cvss_v4_0_score && (
-              <p><strong>CVSS v4.0:</strong> {cveResult.cvss_v4_0_score}</p>
+        <div className="card-luxury space-y-6">
+          <div>
+            <h2 className="text-xl font-display font-bold text-luxury-accent tracking-luxury mb-4">
+              CVE Details
+            </h2>
+          </div>
+          <div className="space-y-4 text-sm">
+            <div className="space-y-1">
+              <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold">CNA (Numbering Authority)</p>
+              <p className="text-luxury-text">{cveResult.cna ? <span className="text-luxury-accent font-semibold">{cveResult.cna}</span> : <span className="text-luxury-text-secondary italic">Not specified</span>}</p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold">Description</p>
+              <p className="text-luxury-text leading-relaxed">{cveResult.description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1 p-3 bg-luxury-bg rounded border border-luxury-border/50">
+                <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold">CVSS v3.1</p>
+                <p className="text-lg font-semibold text-luxury-accent">{cveResult.cvss_v3_1_score}</p>
+              </div>
+              {cveResult.cvss_v4_0_score && (
+                <div className="space-y-1 p-3 bg-luxury-bg rounded border border-luxury-border/50">
+                  <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold">CVSS v4.0</p>
+                  <p className="text-lg font-semibold text-luxury-accent">{cveResult.cvss_v4_0_score}</p>
+                </div>
+              )}
+            </div>
+
+            {cveResult.references && cveResult.references.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-luxury-border">
+                <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold">References</p>
+                <ul className="space-y-2">
+                  {cveResult.references.map((ref: string, i: number) => (
+                    <li key={i}>
+                      <a
+                        href={ref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-luxury-accent hover:text-luxury-accent-alt transition-colors break-all text-xs"
+                      >
+                        {ref}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
-            <p><strong>References:</strong></p>
-            <ul className="ml-4 list-disc">
-              {cveResult.references.map((ref: string, i: number) => (
-                <li key={i} className="text-blue-400 hover:underline">
-                  <a href={ref} target="_blank" rel="noopener noreferrer">{ref}</a>
-                </li>
-              ))}
-            </ul>
+
             {cveResult.attack_profiles && cveResult.attack_profiles.length > 0 && (
-              <div>
-                <p><strong>Cyperf Strikes:</strong></p>
-                <ul className="ml-4 list-disc">
+              <div className="space-y-2 pt-2 border-t border-luxury-border">
+                <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold">Cyperf Test Profiles</p>
+                <ul className="space-y-1">
                   {cveResult.attack_profiles.map((profile: string, i: number) => (
-                    <li key={i} className="text-green-400">{profile}</li>
+                    <li key={i} className="text-luxury-text px-2 py-1 bg-luxury-bg rounded border border-luxury-border/50 text-xs">
+                      {profile}
+                    </li>
                   ))}
                 </ul>
               </div>

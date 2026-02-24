@@ -204,9 +204,19 @@ async def _fetch_and_cache(
         if nvd_obj is None:
             return None
         cve_data = extract_cve_fields(nvd_obj)
-        await cache.set(cve_id, cve_data)
         await _upsert_cve(cve_data, db)
         await db.commit()
+
+        # Enrich with Strike data from cverf_cve_strike_mappings before caching
+        strike_stmt = select(CvrfCveStrikeMappings.strike_name).where(
+            CvrfCveStrikeMappings.cve_id == cve_id
+        )
+        strike_result = await db.execute(strike_stmt)
+        strike_names = list(strike_result.scalars().all())
+        cve_data["attack_profiles"] = strike_names
+        cve_data["testable"] = len(strike_names) > 0
+
+        await cache.set(cve_id, cve_data)
         return cve_data
 
     except NVDRateLimitError:

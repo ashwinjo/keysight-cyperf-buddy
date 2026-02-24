@@ -21,15 +21,15 @@ export default function StaleDataWarning() {
   }
 
   return (
-    <div className="sticky top-16 z-40 bg-yellow-900 text-yellow-200 px-6 py-3 border-b border-yellow-700 flex justify-between items-center">
-      <span className="text-sm font-medium">
-        Cyperf data is outdated (last sync {Math.floor(diffHours)}h ago). Some testability badges may be inaccurate.
+    <div className="sticky top-16 z-40 bg-luxury-accent/10 text-luxury-accent px-8 py-4 border-b border-luxury-accent/30 flex justify-between items-center shadow-elegant animate-in">
+      <span className="text-sm font-medium tracking-tight">
+        ⚠ Data is {Math.floor(diffHours)}h old. Testability status may be inaccurate.
       </span>
       <button
         onClick={() => setIsDismissed(true)}
-        className="ml-4 text-yellow-300 hover:text-yellow-100 font-bold"
+        className="ml-6 text-luxury-accent hover:text-luxury-accent-alt font-semibold transition-colors"
       >
-        &#x2715;
+        ✕
       </button>
     </div>
   );

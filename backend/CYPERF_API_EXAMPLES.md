@@ -494,4 +494,3 @@ EOF
 - [ ] Raises exception with descriptive message on other API errors
 - [ ] Implements timeout (suggest 30 seconds)
 - [ ] Implements retry logic (optional; sync service handles retries)
-
