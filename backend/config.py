@@ -38,7 +38,8 @@ class Settings(BaseSettings):
     cyperf_sync_interval_hours: int = (
         24  # Interval in hours between Cyperf syncs (default: 24 = daily)
     )
-    cve_strikes_output_path: str | None = None  # Override path for JSON artifact
+    cve_strikes_output_path: str | None = None  # Override path for CVE-Strike JSON artifact
+    ai_cves_output_path: str | None = None  # Override path for AI-Strike JSON artifact
 
     # Email service settings (Phase 4.1 - Sales Funnel)
     smtp_server: str = "mail.keysight.com"

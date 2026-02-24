@@ -35,9 +35,11 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
 
     Handles the full sync lifecycle:
     1. Record sync attempt start
-    2. Fetch CVE→Strike mappings from Cyperf with retry logic
-    3. Atomic full-replace: delete all existing cverf_cve_strike_mappings, insert fresh
-    4. Write JSON artifact to ./data/cve_strikes.json
+    2. Fetch CVE→Strike mappings from Cyperf with retry logic (splits AI vs non-AI strikes)
+    3. Atomic full-replace: delete all cverf_cve_strike_mappings and ai_cves, insert fresh
+    4. Write JSON artifacts:
+       - ./data/cve_strikes.json for non-AI CVE→Strike mappings
+       - ./data/ai_cves.json for AI-type strikes with synthetic NoCVE_cyperf IDs
     5. Record completion (success or failure)
 
     On any Cyperf failure:
@@ -140,7 +142,8 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
                     f"Full-replace sync: inserted {len(ai_strikes)} AI strike rows into ai_cves"
                 )
 
-                # Write JSON artifact (outside transaction — non-fatal if write fails)
+                # Write JSON artifacts (outside transaction — non-fatal if write fails)
+                # Both non-AI and AI strikes are persisted as JSON for audit/inspection
                 try:
                     output_path = (
                         getattr(settings, "cve_strikes_output_path", None)
@@ -153,6 +156,37 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
                 except Exception as json_err:
                     logger.warning(
                         f"Failed to write CVE-Strike JSON artifact: {json_err} (sync continues)"
+                    )
+
+                # Write AI strikes JSON artifact
+                try:
+                    ai_output_path = (
+                        getattr(settings, "ai_cves_output_path", None) or "./data/ai_cves.json"
+                    )
+                    os.makedirs(os.path.dirname(os.path.abspath(ai_output_path)), exist_ok=True)
+
+                    # Convert AI strike records to dict format for JSON serialization
+                    ai_strikes_data = [
+                        {
+                            "id": record.row_id,
+                            "cve_id": record.cve_id,
+                            "strike_name": record.strike_name,
+                            "strike_type": record.strike_type,
+                            "metadata": json.loads(record.metadata_json)
+                            if record.metadata_json
+                            else None,
+                        }
+                        for record in ai_strikes
+                    ]
+
+                    with open(ai_output_path, "w") as f:
+                        json.dump(ai_strikes_data, f, indent=2)
+                    logger.info(
+                        f"Wrote AI-Strike JSON artifact to {ai_output_path} ({len(ai_strikes)} strikes)"
+                    )
+                except Exception as json_err:
+                    logger.warning(
+                        f"Failed to write AI-Strike JSON artifact: {json_err} (sync continues)"
                     )
 
                 # Record successful completion
