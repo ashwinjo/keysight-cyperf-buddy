@@ -126,6 +126,19 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 
 ---
 
+### Phase 04.1: Sales Funnel (INSERTED)
+
+**Goal:** Capture sales leads via contact form submissions triggered from CVE detail views. Backend sends email notifications to the sales team. Frontend provides the contact form modal and confirmation UX.
+**Depends on:** Phase 4
+**Plans:** 5 plans
+
+Plans:
+- [x] 04.1-01-PLAN.md — Backend email service: SMTP config, email_service.py, POST /contact/submit endpoint (complete 2026-02-24)
+- [ ] 04.1-02-PLAN.md
+- [ ] 04.1-03-PLAN.md
+- [ ] 04.1-04-PLAN.md
+- [ ] 04.1-05-PLAN.md
+
 ### Phase 5: Batch Processing + Export
 
 **Goal**: Users can submit a list of CVE IDs, have them processed asynchronously in the background, view results in a structured table, and download a CSV report.
@@ -151,7 +164,8 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 | 1. Project Setup + Infrastructure | 1/1 | Complete | 2026-02-23 |
 | 2. Backend API + NVD Integration | 0/? | Not started | - |
 | 3. Cyperf Integration + Sync Engine | 2/2 | Complete | 2026-02-23 |
-| 4. Frontend UI | 2/2 | Complete   | 2026-02-23 |
+| 4. Frontend UI | 2/2 | Complete | 2026-02-23 |
+| 4.1 Sales Funnel | 1/5 | In Progress | - |
 | 5. Batch Processing + Export | 0/? | Not started | - |
 
 ---

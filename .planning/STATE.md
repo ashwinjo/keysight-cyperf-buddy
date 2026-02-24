@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
-**Last updated:** 2026-02-23
-**Session:** Phase 4.1 context gathered - Sales Funnel feature (lead capture, contact form, email notification)
+**Last updated:** 2026-02-24
+**Session:** Phase 4.1 Plan 01 executed - Backend email service + FastAPI contact endpoint
 
 ---
 
@@ -17,9 +17,9 @@
 
 ## Current Position
 
-**Active Phase:** 3.1
-**Active Plan:** 03.1-03-PLAN (complete)
-**Status:** Ready to plan
+**Active Phase:** 4.1
+**Active Plan:** 04.1-01-PLAN (complete)
+**Status:** In progress — Plan 01 complete, Plans 02-05 pending
 
 **Progress:**
 [██████████] 100%
@@ -27,7 +27,8 @@ Phase 1 [Project Setup + Infrastructure]           [x] Complete (7/7 tasks)
 Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/2 plans)
 Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
 Phase 3.1 [Cyperf CVE Ingestion Refactor]          [x] Complete (8/8 tasks, 3/3 plans)
-Phase 4 [Frontend UI]                              [ ] Ready (all backend APIs complete)
+Phase 4 [Frontend UI]                              [x] Complete (all backend APIs complete)
+Phase 4.1 [Sales Funnel]                           [~] In Progress (1/5 plans: 04.1-01 complete)
 Phase 5 [Batch Processing + Export]                [ ] Not started (depends on Phase 2 + 3 + 4)
 
 Overall: 3/5 phases complete (60%)
@@ -43,7 +44,7 @@ Overall: 3/5 phases complete (60%)
 | v1 requirements covered | 21/21 | 21/21 |
 | Phases defined | 5 | 5 |
 | Phases complete | 5 | 3 |
-| Plans executed | ? | 9 (01-01 through 03.1-03) |
+| Plans executed | ? | 10 (01-01 through 04.1-01) |
 | Tests passing | TBD | 34/34 integration tests (Phase 3.1) |
 | Phase 1 success criteria | 5/5 | 5/5 |
 | Phase 2 success criteria | 10/10 | 10/10 |
@@ -128,6 +129,10 @@ Phase 1 (Setup) ✓
 - [Phase 03.1-cyperf-cve-ingestion-refactor Plan 03]: Two-step batch-load pattern for strike names (select CVEs, then IN-clause batch for strikes) — avoids cross-dialect aggregate functions
 - [Phase 03.1-cyperf-cve-ingestion-refactor Plan 03]: Pydantic field_validator coerces testable=None->False for backward Redis cache compat without requiring cache flush
 - [Phase 03.1-cyperf-cve-ingestion-refactor Plan 03]: engine.dispose() before raw asyncpg.connect() in test teardown — required for pool isolation in pytest-asyncio auto mode
+- [Phase 04.1-sales-funnel Plan 01]: pydantic[email] required for EmailStr in Pydantic v2 — added to requirements.txt
+- [Phase 04.1-sales-funnel Plan 01]: BackgroundTasks wrapper absorbs all exceptions (fire-and-forget); underlying send_contact_email re-raises for independent testability
+- [Phase 04.1-sales-funnel Plan 01]: PII minimization: name/company never logged from contact endpoint — only CVE ID, context, submitter email
+- [Phase 04.1-sales-funnel Plan 01]: No live SMTP probe at startup — startup warning only; avoids blocking if SMTP server unavailable
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -167,7 +172,7 @@ None currently. Phases 1-3 complete and operational.
 
 ## Next Actions
 
-**Phase 3.1 COMPLETE.** All backend APIs ready. Ready to execute:
+**Phase 4.1 IN PROGRESS.** Plan 04.1-01 (backend email service) complete. Ready to execute Plan 04.1-02 next.
 
 ### Option A: Execute Phase 4 (Frontend UI)
 - Build React SPA with Vite + Tailwind + shadcn/ui
