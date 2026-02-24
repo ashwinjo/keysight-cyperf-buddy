@@ -20,7 +20,7 @@ from datetime import datetime
 
 from fastapi import BackgroundTasks
 from rapidfuzz import fuzz, process
-from sqlalchemy import select
+from sqlalchemy import distinct, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.cve import CVE
@@ -131,16 +131,17 @@ async def get_latest_cves(
     db: AsyncSession,
     cache: CVECacheService,
 ) -> tuple[list[dict], int]:
-    """Fetch latest CVEs sorted by published date (newest first).
+    """Fetch latest CVEs WITH Cyperf strike mappings, sorted by published date (newest first).
 
     Strategy:
     1. Attempt NVD fetch for the last 30 days; cache each CVE individually.
-    2. Query local DB with pagination (sorted by published_date DESC).
+    2. Query local DB for CVEs that HAVE strike mappings (testable), with pagination.
     3. Batch-load Strike names from cverf_cve_strike_mappings for each page.
     4. Apply severity post-filter in Python (covers both v3.1 and v4.0).
 
     Returns (page_results, total_on_page).
     On NVD failure, serves from DB-only (graceful degradation).
+    Note: Only returns testable CVEs (those with Cyperf strike mappings).
     """
     # Step 1: Try to refresh DB from NVD (non-blocking on failure)
     try:
@@ -156,9 +157,21 @@ async def get_latest_cves(
     except Exception as exc:
         logger.error("NVD fetch failed for /cve/latest: %s", exc, exc_info=True)
 
-    # Step 2: Query DB with pagination (sorted by published_date DESC)
+    # Step 2: Query DB for CVEs WITH strike mappings only (INNER JOIN pattern)
+    # Get distinct CVE IDs from cverf_cve_strike_mappings, then fetch their data
     offset = (page - 1) * page_size
-    stmt = select(CVE).order_by(CVE.published_date.desc()).offset(offset).limit(page_size)
+
+    # Subquery: get all CVE IDs that have strike mappings
+    testable_cve_ids_subq = select(distinct(CvrfCveStrikeMappings.cve_id))
+
+    # Main query: fetch CVE data for those IDs, sorted by published_date DESC
+    stmt = (
+        select(CVE)
+        .where(CVE.id.in_(testable_cve_ids_subq))
+        .order_by(CVE.published_date.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
     result = await db.execute(stmt)
     cves = result.scalars().all()
 
