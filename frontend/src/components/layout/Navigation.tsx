@@ -29,20 +29,31 @@ export default function Navigation() {
   return (
     <nav className="sticky top-0 z-50 border-b border-gray-700 bg-dark-950">
       <div className="mx-auto max-w-7xl px-6 py-4">
-        <div className="flex gap-8">
-          {NAV_ITEMS.map(({ path, label }) => (
-            <a
-              key={path}
-              href={path}
-              className={`text-sm font-medium transition-colors ${
-                isActive(path)
-                  ? 'text-white border-b-2 border-blue-500'
-                  : 'text-gray-400 hover:text-gray-200 border-b-2 border-transparent'
-              }`}
-            >
-              {label}
-            </a>
-          ))}
+        <div className="flex items-center gap-12">
+          {/* Brand name */}
+          <a
+            href="/"
+            className="text-2xl font-bold text-white hover:text-blue-400 transition-colors whitespace-nowrap"
+          >
+            CVE2Strike
+          </a>
+
+          {/* Navigation menu */}
+          <div className="flex gap-8">
+            {NAV_ITEMS.map(({ path, label }) => (
+              <a
+                key={path}
+                href={path}
+                className={`text-sm font-medium transition-colors ${
+                  isActive(path)
+                    ? 'text-white border-b-2 border-blue-500'
+                    : 'text-gray-400 hover:text-gray-200 border-b-2 border-transparent'
+                }`}
+              >
+                {label}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </nav>
