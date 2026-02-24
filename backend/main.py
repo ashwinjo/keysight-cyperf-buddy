@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from config import get_settings
 from dependencies import set_redis_client
 from routes.admin import router as admin_router
+from routes.ai_cves import router as ai_cves_router
 from routes.contact import router as contact_router
 from routes.cve import router as cve_router
 from routes.health import router as health_router
@@ -111,6 +112,7 @@ app.include_router(health_router)
 app.include_router(cve_router)
 app.include_router(admin_router)
 app.include_router(contact_router)
+app.include_router(ai_cves_router)
 
 
 if __name__ == "__main__":

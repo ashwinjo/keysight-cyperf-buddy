@@ -131,7 +131,7 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
                                 cve_id=record.cve_id,
                                 strike_name=record.strike_name,
                                 strike_type=record.strike_type,
-                                metadata=record.metadata_json,
+                                metadata_json=record.metadata_json,
                             )
                         )
 

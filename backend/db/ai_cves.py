@@ -83,7 +83,11 @@ class AICve(Base):
     # JSON blob of raw Metadata.References from Cyperf API response.
     # Stored as TEXT; application layer handles json.loads/dumps.
     # NULL when References list is empty or Metadata key is absent entirely.
-    metadata = Column(
+    # Python attribute is 'metadata_json' to avoid collision with SQLAlchemy's
+    # reserved DeclarativeBase.metadata class attribute (added in 2.0.28+).
+    # The actual DB column name remains 'metadata' for schema compatibility.
+    metadata_json = Column(
+        "metadata",
         TEXT,
         nullable=True,
         comment="JSON-encoded Metadata.References from Cyperf API; null when empty",
