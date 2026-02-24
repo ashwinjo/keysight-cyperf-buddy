@@ -85,14 +85,19 @@ export const useLatestCVEs = (page = 1, pageSize = 25) => {
 };
 
 // Hook 3: Fetch AI-generated CVEs from the ai_cves table
-// Returns a flat list of AI CVE records. Endpoint may not yet be implemented —
-// axios will throw a 404/500 which react-query surfaces as an error state.
+// Returns a flat list of AI CVE records. Fetches all records (up to 10000) for client-side
+// filtering and search. If there are >10000 AI records, pagination should be implemented.
+// Endpoint may not yet be implemented — axios will throw a 404/500 which react-query
+// surfaces as an error state.
 export const useAiCVEs = () => {
   return useQuery({
     queryKey: ['cve', 'ai-cves'],
     queryFn: async () => {
       const res = await axios.get<{ results: AiCVEResponse[]; total: number }>(
-        `${API_BASE}/ai-cves`
+        `${API_BASE}/ai-cves`,
+        {
+          params: { limit: 10000 }, // Fetch all records for client-side filtering
+        }
       );
       return res.data.results || [];
     },
