@@ -14,8 +14,12 @@ from sqlalchemy.orm import sessionmaker
 os.environ.setdefault("CYPERF_CONTROLLER_IP", "test-host")
 os.environ.setdefault("CYPERF_USERNAME", "test-user")
 os.environ.setdefault("CYPERF_PASSWORD", "test-password")
+
+# SMTP stubs for test environment — prevents settings validation warning.
+# These are overridden by actual values in .env during live testing.
 os.environ.setdefault("SMTP_USERNAME", "test@keysight.com")
-os.environ.setdefault("SMTP_PASSWORD", "test-password")
+os.environ.setdefault("SMTP_PASSWORD", "test-password-not-real")
+os.environ.setdefault("SMTP_SERVER", "smtp.test.internal")
 
 from database import Base, get_db  # noqa: E402
 from dependencies import get_cache_service, get_nvd_client  # noqa: E402
