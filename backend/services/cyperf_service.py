@@ -1,11 +1,25 @@
-"""Cyperf API integration service."""
+"""Cyperf API integration service.
 
+Uses the official cyperf-api-wrapper Python client (ApplicationResourcesApi)
+to fetch Strike data and extract CVE→Strike mappings via paginated batching.
+
+No direct HTTP calls — all Cyperf communication goes through cyperf.ApiClient.
+"""
+
+import json
 import logging
-import time
 from dataclasses import dataclass
-from typing import Any
+
+try:
+    import cyperf
+except ImportError as _import_err:
+    raise ImportError(
+        "cyperf-api-wrapper not installed; run: pip install cyperf-api-wrapper"
+    ) from _import_err
 
 logger = logging.getLogger(__name__)
+
+BATCH_SIZE = 500
 
 
 @dataclass
@@ -24,208 +38,131 @@ class CyperfConnectionError(Exception):
 
 
 class CyperfAPIError(Exception):
-    """Raised when Cyperf API returns an error."""
+    """Raised when Cyperf API returns an error (auth/permission/HTTP failures)."""
 
     pass
 
 
 class CyperfService:
-    """Service for integrating with Cyperf Controller via cyperf-api-wrapper."""
+    """Service for integrating with Cyperf Controller via cyperf-api-wrapper.
+
+    All API communication uses the official Keysight Python client
+    (ApplicationResourcesApi). No direct httpx calls are made.
+    """
 
     def __init__(self, controller_ip: str, username: str, password: str) -> None:
-        """Initialize Cyperf API client.
+        """Initialize Cyperf service with API wrapper configuration.
 
         Args:
-            controller_ip: IP address of Cyperf Controller
-            username: Username for authentication
-            password: Password for authentication
+            controller_ip: IP address or hostname of the Cyperf Controller
+            username: Cyperf Controller username
+            password: Cyperf Controller password
 
-        Raises:
-            CyperfConnectionError: If unable to connect to controller
+        Note:
+            Does NOT open a network connection at construction time.
+            Connection is established per-call via ApiClient context manager.
+            verify_ssl=False is required for Cyperf's self-signed certificates.
         """
         self.controller_ip = controller_ip
-        self.username = username
-        self.password = password
-        self.client = None
 
-        # Import cyperf-api-wrapper at initialization time
-        try:
-            from cyperf_api_wrapper import CyperfApiClient  # type: ignore[import-not-found]
+        self._config = cyperf.Configuration(
+            host=f"https://{controller_ip}",
+            username=username,
+            password=password,
+        )
+        self._config.verify_ssl = False
 
-            logger.info(f"Initializing Cyperf API client for controller {controller_ip}")
-            self.client = CyperfApiClient(
-                controller_address=controller_ip,
-                username=username,
-                password=password,
-            )
-            logger.info(f"✓ Cyperf API client initialized for {controller_ip}")
-        except ImportError as e:
-            logger.error("cyperf-api-wrapper not installed; unable to initialize Cyperf service")
-            raise CyperfConnectionError(f"cyperf-api-wrapper import failed: {e}") from e
-        except Exception as e:
-            logger.error(f"Failed to initialize Cyperf API client: {e}")
-            raise CyperfConnectionError(
-                f"Unable to connect to Cyperf Controller {controller_ip}: {e}"
-            ) from e
+        logger.info(f"Initialized CyperfService for {controller_ip}")
 
-    async def fetch_attack_profiles(self) -> list[Any]:
-        """Fetch all attack profiles from Cyperf Controller.
+    async def fetch_cve_strike_mappings(self) -> dict[str, str]:
+        """Fetch all CVE→Strike mappings from Cyperf using paginated API calls.
+
+        Uses ApplicationResourcesApi.get_resources_strikes() with skip/take=500 batching.
+        Extracts CVE IDs from strike.get("Metadata", {}).get("References", [])
+        where Type="CVE".
 
         Returns:
-            List of attack profile objects from Cyperf API
+            dict mapping CVE ID (e.g. "CVE-2024-1234") to Strike name
+            (e.g. "Apache-Log4j-RCE"). When one CVE maps to multiple strikes,
+            the last strike processed wins (single-value JSON map structure).
 
         Raises:
-            CyperfConnectionError: If connection to controller fails
-            CyperfAPIError: If Cyperf API returns an error
-        """
-        if not self.client:
-            raise CyperfConnectionError("Cyperf API client not initialized")
-
-        try:
-            start_time = time.time()
-            logger.info("Fetching attack profiles from Cyperf Controller...")
-
-            # Call the Cyperf API wrapper to get all attack profiles
-            # Note: Assuming the wrapper has a method to fetch profiles
-            # This will need to be validated against actual cyperf-api-wrapper API
-            profiles = self.client.get_all_attack_profiles()
-
-            duration = time.time() - start_time
-            logger.info(f"✓ Fetched {len(profiles)} attack profiles from Cyperf in {duration:.2f}s")
-            return profiles
-
-        except AttributeError as e:
-            # Method doesn't exist on client
-            logger.error(f"Cyperf API method not found: {e}")
-            raise CyperfAPIError(f"Cyperf API interface error: {e}") from e
-        except ConnectionError as e:
-            logger.error(f"Connection error while fetching profiles: {e}")
-            raise CyperfConnectionError(f"Connection to Cyperf failed: {e}") from e
-        except Exception as e:
-            logger.error(f"Unexpected error fetching profiles: {type(e).__name__}: {e}")
-            if "401" in str(e) or "unauthorized" in str(e).lower():
-                raise CyperfAPIError(f"Authentication failed: {e}") from e
-            raise CyperfConnectionError(f"Failed to fetch profiles: {e}") from e
-
-    def extract_cves_from_profiles(self, profiles: list[Any]) -> dict[str, str]:
-        """Extract CVE IDs from attack profile metadata.
-
-        Parses each profile's metadata to find CVE associations and maps them
-        to profile names for later database storage.
-
-        Args:
-            profiles: List of attack profile objects from Cyperf API
-
-        Returns:
-            Dictionary mapping CVE ID to attack profile name: {cve_id: profile_name}
+            CyperfConnectionError: If connection to controller fails or times out
+            CyperfAPIError: If API returns 401/403 or another unexpected HTTP error
         """
         cve_mappings: dict[str, str] = {}
+        profiles_count = 0
+        skip = 0
 
-        logger.info(f"Extracting CVEs from {len(profiles)} attack profiles...")
+        try:
+            with cyperf.ApiClient(self._config) as api_client:
+                api_instance = cyperf.ApplicationResourcesApi(api_client)
 
-        for i, profile in enumerate(profiles):
-            try:
-                # Profile structure assumed from Cyperf API
-                # Expected: profile has 'name' field and either 'cves' list or metadata containing CVEs
-                profile_name = profile.get("name", f"unknown_profile_{i}")
+                while True:
+                    response = api_instance.get_resources_strikes(take=BATCH_SIZE, skip=skip)
+                    strikes = json.loads(response.to_json()).get("data", [])
 
-                # Try to get CVE list from profile
-                cves = []
-                if "cves" in profile:
-                    # Direct CVE list
-                    cves = (
-                        profile["cves"] if isinstance(profile["cves"], list) else [profile["cves"]]
-                    )
-                elif "metadata" in profile and "cves" in profile.get("metadata", {}):
-                    # CVEs in metadata
-                    cves = profile["metadata"]["cves"]
-                    if isinstance(cves, str):
-                        cves = [cves]
+                    if not strikes:
+                        break
 
-                # Extract CVE IDs and map to profile
-                for cve in cves:
-                    if isinstance(cve, str):
-                        cve_id = cve
-                    elif isinstance(cve, dict):
-                        cve_id = cve.get("id") or cve.get("cve_id")
-                    else:
-                        cve_id = str(cve)
+                    for strike in strikes:
+                        strike_name = strike.get("Name", "Unknown")
+                        refs = strike.get("Metadata", {}).get("References", [])
+                        for ref in refs:
+                            if ref.get("Type") == "CVE" and ref.get("Value"):
+                                cve_id = f"CVE-{ref['Value']}"
+                                cve_mappings[cve_id] = strike_name
+                            elif ref.get("Type") == "CVE":
+                                logger.warning(
+                                    f"Incomplete CVE reference in strike '{strike_name}': {ref}"
+                                )
 
-                    if cve_id and isinstance(cve_id, str):
-                        cve_mappings[cve_id] = profile_name
+                    profiles_count += len(strikes)
+                    logger.info(f"Processed batch skip={skip}: {len(strikes)} strikes")
+                    skip += BATCH_SIZE
 
-            except Exception as e:
-                # Log warning but continue processing other profiles
-                logger.warning(
-                    f"Failed to parse CVEs from profile at index {i}: {e}; skipping this profile"
-                )
+        except (CyperfConnectionError, CyperfAPIError):
+            raise
+        except Exception as e:
+            err_lower = str(e).lower()
+            if "401" in err_lower or "unauthorized" in err_lower:
+                raise CyperfAPIError(f"Authentication failed: {e}") from e
+            if "403" in err_lower or "forbidden" in err_lower:
+                raise CyperfAPIError(f"Permission denied: {e}") from e
+            if "connect" in err_lower or "timeout" in err_lower or "refused" in err_lower:
+                raise CyperfConnectionError(
+                    f"Cannot connect to Cyperf at {self.controller_ip}: {e}"
+                ) from e
+            raise CyperfConnectionError(f"Unexpected error from Cyperf API: {e}") from e
 
-        logger.info(f"✓ Extracted {len(cve_mappings)} CVE-to-profile mappings")
+        logger.info(f"Fetched {profiles_count} strikes, extracted {len(cve_mappings)} CVE mappings")
         return cve_mappings
 
     async def sync_cyperf_cves(self, retry_count: int = 0) -> SyncResult:
-        """Orchestrate full CVE sync: fetch profiles, extract CVEs, return result.
+        """Orchestrate CVE sync via fetch_cve_strike_mappings().
 
-        This is the main entry point for sync operations. It handles the complete
-        cycle: fetch, parse, and prepare for database upsert.
+        Exists for backward compatibility with existing scheduler call-sites.
+        The primary data path in Phase 3.1 is sync_service.py calling
+        fetch_cve_strike_mappings() directly.
 
         Args:
-            retry_count: Internal use only; tracks retry attempts
+            retry_count: Unused; kept for backward-compatible signature
 
         Returns:
-            SyncResult with profiles_fetched, cves_extracted, and optional error message
-
-        Note:
-            Error handling is intentionally non-raising; errors are captured in
-            the returned SyncResult for graceful degradation.
+            SyncResult with cves_extracted count; profiles_fetched is 0
+            (not tracked separately — absorbed into cves_extracted).
+            On error, returns SyncResult with error message set.
         """
         try:
-            start_time = time.time()
-            logger.info("Starting Cyperf sync operation...")
-
-            # Fetch profiles from Cyperf
-            profiles = await self.fetch_attack_profiles()
-            profiles_count = len(profiles)
-
-            # Extract CVEs from profiles
-            cve_mappings = self.extract_cves_from_profiles(profiles)
-            cves_count = len(cve_mappings)
-
-            duration = time.time() - start_time
-            logger.info(
-                f"✓ Cyperf sync completed: fetched {profiles_count} profiles, "
-                f"extracted {cves_count} CVEs in {duration:.2f}s"
-            )
-
+            cve_mappings = await self.fetch_cve_strike_mappings()
             return SyncResult(
-                profiles_fetched=profiles_count,
-                cves_extracted=cves_count,
+                profiles_fetched=0,
+                cves_extracted=len(cve_mappings),
                 error=None,
             )
-
-        except CyperfConnectionError as e:
-            duration = time.time() - start_time
-            logger.error(f"Connection error during sync (attempt {retry_count + 1}): {e}")
-            return SyncResult(
-                profiles_fetched=0,
-                cves_extracted=0,
-                error=f"Connection error: {str(e)}",
-            )
-
-        except CyperfAPIError as e:
-            duration = time.time() - start_time
-            logger.error(f"API error during sync: {e}")
-            return SyncResult(
-                profiles_fetched=0,
-                cves_extracted=0,
-                error=f"API error: {str(e)}",
-            )
-
+        except (CyperfConnectionError, CyperfAPIError) as e:
+            logger.error(f"Sync failed: {e}")
+            return SyncResult(profiles_fetched=0, cves_extracted=0, error=str(e))
         except Exception as e:
-            duration = time.time() - start_time
-            logger.error(f"Unexpected error during sync: {type(e).__name__}: {e}")
-            return SyncResult(
-                profiles_fetched=0,
-                cves_extracted=0,
-                error=f"Unexpected error: {str(e)}",
-            )
+            logger.error(f"Unexpected sync error: {type(e).__name__}: {e}")
+            return SyncResult(profiles_fetched=0, cves_extracted=0, error=f"Unexpected: {e}")
