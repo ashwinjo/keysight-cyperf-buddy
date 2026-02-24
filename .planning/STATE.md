@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-23
-**Session:** Phase 3.1 Plan 03 complete - Query layer migrated to cverf_cve_strike_mappings; 34 tests passing
+**Session:** Phase 4.1 context gathered - Sales Funnel feature (lead capture, contact form, email notification)
 
 ---
 
@@ -84,6 +84,7 @@ Overall: 3/5 phases complete (60%)
 ### Roadmap Evolution
 
 - Phase 3.1 inserted after Phase 3: Cyperf CVE Ingestion Refactor (URGENT) — Rework Cyperf sync pipeline to use ApplicationResourcesApi.get_resources_strikes() pattern from info_fetch.py; ingest JSON CVE→Strike mappings into persistent DB for UI cross-reference
+- Phase 4.1 inserted after Phase 4: Sales Funnel (INSERTED)
 
 ### Phase Dependencies
 
