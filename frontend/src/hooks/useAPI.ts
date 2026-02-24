@@ -50,17 +50,18 @@ export const useSearchCVE = (cveId: string | null) => {
   });
 };
 
-// Hook 2: Fetch paginated latest CVEs
-// Supports testability filter for Browse page "Show testable only" toggle
-export const useLatestCVEs = (page = 1, pageSize = 25, onlyTestable = false) => {
+// Hook 2: Fetch paginated latest CVEs with Cyperf strike data
+// Loads all CVEs from database with testability status based on Cyperf strikes
+export const useLatestCVEs = (page = 1, pageSize = 25) => {
   return useQuery({
-    queryKey: ['cve', 'latest', page, pageSize, onlyTestable],
+    queryKey: ['cve', 'latest', page, pageSize],
     queryFn: async () => {
       const res = await axios.get<any>(`${API_BASE}/cve/latest`, {
-        params: { page, page_size: pageSize, only_testable: onlyTestable }
+        params: { page, limit: pageSize }
       });
-      // Normalize backend response to match CVEResponse[] interface
-      const normalizedCves = (res.data.cves || []).map((backendCve: any) => ({
+      // Backend returns results array directly with CVEDetail objects
+      // Each CVEDetail includes testable flag and attack_profiles from database
+      const normalizedCves = (res.data.results || []).map((backendCve: any) => ({
         id: backendCve.id,
         cvss_v3_1_score: backendCve.cvss_v3_score,
         cvss_v4_0_score: backendCve.cvss_v4_score,
@@ -68,7 +69,7 @@ export const useLatestCVEs = (page = 1, pageSize = 25, onlyTestable = false) => 
         published_date: backendCve.published_date,
         references: backendCve.reference_urls || [],
         cna: backendCve.cna,
-        testable: backendCve.testable,
+        testable: backendCve.testable || false,
         attack_profiles: backendCve.attack_profiles || [],
       }));
       return {
@@ -76,7 +77,7 @@ export const useLatestCVEs = (page = 1, pageSize = 25, onlyTestable = false) => 
         total: res.data.total,
         page: res.data.page,
         page_size: res.data.page_size,
-        has_next: res.data.has_next,
+        has_next: false, // Backend doesn't return has_next currently
       };
     },
     staleTime: 1000 * 60 * 5,  // 5 minutes

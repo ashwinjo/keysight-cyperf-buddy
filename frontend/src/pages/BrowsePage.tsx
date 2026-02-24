@@ -1,17 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useLatestCVEs } from '../hooks/useAPI';
 import { SortState, CVEResponse } from '../types/api';
-import TestableFilter from '../components/pages/TestableFilter';
 import DataTable from '../components/shared/DataTable';
 
-const PAGE_SIZE = 1000; // Load all CVEs at once
+const PAGE_SIZE = 500; // Backend max limit per page
 
 export default function BrowsePage() {
   const [searchInput, setSearchInput] = useState('');
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
 
-  // Always load from page 1 with large page size to get all CVEs
-  const { data: browseResult, isLoading } = useLatestCVEs(1, PAGE_SIZE, false);
+  // Load all CVEs from database with Cyperf strike information
+  // The database contains CVE-to-Strike mappings synced from Cyperf
+  const { data: browseResult, isLoading } = useLatestCVEs(1, PAGE_SIZE);
 
   const tableData = browseResult?.cves || [];
   const total = browseResult?.total || 0;
