@@ -11,9 +11,9 @@ export interface BadgeProps {
 export default function Badge({ testable }: BadgeProps) {
   if (testable) {
     return (
-      <span className="inline-block px-4 py-2 rounded-md bg-luxury-accent/10 text-luxury-accent
-                       text-xs font-semibold tracking-luxury uppercase border border-luxury-accent/30
-                       transition-all duration-200 hover:border-luxury-accent hover:bg-luxury-accent/20">
+      <span className="inline-block px-4 py-2 rounded-md bg-green-900/30 text-green-300
+                       text-xs font-semibold tracking-luxury uppercase border border-green-700/50
+                       transition-all duration-200 hover:border-green-600 hover:bg-green-900/50">
         Testable
       </span>
     );

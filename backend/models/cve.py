@@ -102,7 +102,7 @@ class CVELatestResponse(BaseModel):
     results: list[CVEDetail]
     total: int = Field(..., description="Number of results in this page")
     page: int = Field(1, ge=1, description="Current page number (1-indexed)")
-    page_size: int = Field(..., ge=1, le=500, description="Number of results per page")
+    page_size: int = Field(..., ge=1, le=2500, description="Number of results per page (max: 2500)")
     severity_filter: str | None = Field(None, description="Applied severity filter if any")
 
 

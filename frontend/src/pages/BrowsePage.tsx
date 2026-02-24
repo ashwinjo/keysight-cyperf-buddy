@@ -3,13 +3,13 @@ import { useLatestCVEs } from '../hooks/useAPI';
 import { SortState, CVEResponse } from '../types/api';
 import DataTable from '../components/shared/DataTable';
 
-const PAGE_SIZE = 500; // Backend max limit per page
+const PAGE_SIZE = 2500; // Load all ~2195 CVEs from Cyperf in one request
 
 export default function BrowsePage() {
   const [searchInput, setSearchInput] = useState('');
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
 
-  // Load all CVEs from database with Cyperf strike information
+  // Load ALL CVEs from cverf_cve_strike_mappings table
   // Show ONLY synced CVEs (testable = true)
   const { data: browseResult, isLoading } = useLatestCVEs(1, PAGE_SIZE);
 

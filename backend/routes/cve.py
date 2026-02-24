@@ -149,7 +149,7 @@ async def search_cve(
 )
 async def get_latest(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
-    limit: int = Query(50, ge=1, le=500, description="Results per page (default: 50, max: 500)"),
+    limit: int = Query(50, ge=1, le=2500, description="Results per page (default: 50, max: 2500)"),
     severity: str | None = Depends(_validate_severity),
     nvd: NVDClient = Depends(get_nvd_client),
     cache: CVECacheService = Depends(get_cache_service),
@@ -158,6 +158,7 @@ async def get_latest(
     """Return paginated list of recent CVEs sorted by published date (newest first).
 
     - Default: 50 results, page 1
+    - Get all: `GET /cve/latest?limit=2500` (returns all 2195 CVEs)
     - Filter: `GET /cve/latest?severity=HIGH`
     - Pagination: `GET /cve/latest?page=2&limit=100`
 
