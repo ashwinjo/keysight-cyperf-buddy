@@ -45,3 +45,24 @@ export interface SortState {
   column: 'cve_id' | 'cvss' | 'published_date' | null;
   direction: SortDirection;
 }
+
+// Contact form types (Phase 4.1 - Sales Funnel)
+export type ContactContext = 'discuss' | 'feature_request';
+
+export interface ContactFormRequest {
+  first_name: string;
+  last_name: string;
+  company: string;
+  email: string;
+  cve_id: string;
+  context: ContactContext;
+  testable: boolean;
+  cvss_score: number | null;
+  attack_profiles: string[];
+}
+
+export interface ContactFormResponse {
+  success: boolean;
+  message: string;
+  preview: string;
+}
