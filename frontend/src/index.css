@@ -6,15 +6,15 @@
 
 @layer base {
   body {
-    background-color: #FFFFFF;
-    color: #000000;
+    background-color: #000000;
+    color: #FFFFFF;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: Georgia, Garamond, serif;
     letter-spacing: 0.05em;
-    color: #000000;
+    color: #FFFFFF;
   }
 }
 
@@ -25,24 +25,24 @@
   }
 
   .btn-luxury-secondary {
-    @apply px-6 py-3 bg-white border border-keysight-gray text-keysight-gray font-medium
+    @apply px-6 py-3 bg-gray-900 border border-gray-700 text-gray-300 font-medium
            tracking-luxury uppercase text-xs transition-all duration-200 hover:border-keysight-red
            hover:text-keysight-red shadow-elegant;
   }
 
   .input-luxury {
-    @apply bg-white border border-keysight-gray text-black placeholder:text-keysight-gray-medium
+    @apply bg-gray-900 border border-gray-700 text-white placeholder:text-gray-500
            px-4 py-3 tracking-tight transition-all duration-200 focus:border-keysight-red focus:ring-1
            focus:ring-keysight-red focus:outline-none;
   }
 
   .card-luxury {
-    @apply bg-white border border-keysight-gray-light rounded-lg p-6 shadow-elegant
+    @apply bg-gray-900 border border-gray-800 rounded-lg p-6 shadow-elegant
            transition-all duration-300 hover:shadow-elegant-lg hover:border-keysight-red;
   }
 
   .divider-luxury {
-    @apply border-t border-keysight-gray-light;
+    @apply border-t border-gray-800;
   }
 }
 
