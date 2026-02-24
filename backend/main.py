@@ -57,6 +57,26 @@ async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
         scheduler.start()
         set_scheduler(scheduler)
         logger.info("Cyperf sync scheduler started (02:00 UTC, +/-5min jitter)")
+
+        # Trigger immediate sync on startup to populate CVE database
+        try:
+            from datetime import datetime
+
+            from scheduler import sync_cyperf_job
+
+            scheduler.add_job(
+                sync_cyperf_job,
+                trigger="date",
+                run_date=datetime.utcnow(),
+                args=[app, settings],
+                id="startup_sync",
+                name="Startup Cyperf Sync",
+                replace_existing=False,
+            )
+            logger.info("✓ Queued immediate startup Cyperf sync")
+        except Exception as exc:
+            logger.error("Failed to queue startup sync: %s; will use scheduled sync instead", exc)
+
     except Exception as exc:
         logger.error("Scheduler startup failed: %s; app continues with manual sync only", exc)
 

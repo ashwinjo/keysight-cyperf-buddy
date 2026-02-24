@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import Settings
 from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
-from db.cyperf_mapping import CyperfSupportedCVE  # noqa: F401 — kept; admin.py reads this table
 from db.sync_metadata import SyncMetadata
 from services.cyperf_service import CyperfAPIError, CyperfConnectionError, CyperfService
 

@@ -31,7 +31,6 @@ from services.nvd_service import (
     NVDRateLimitError,
     extract_cve_fields,
     fetch_cve_with_retry,
-    fetch_latest_with_retry,
 )
 
 logger = logging.getLogger(__name__)
@@ -131,65 +130,70 @@ async def get_latest_cves(
     db: AsyncSession,
     cache: CVECacheService,
 ) -> tuple[list[dict], int]:
-    """Fetch latest CVEs WITH Cyperf strike mappings, sorted by published date (newest first).
+    """Fetch all CVEs from Cyperf strike mappings (source of truth for testability).
 
     Strategy:
-    1. Attempt NVD fetch for the last 30 days; cache each CVE individually.
-    2. Query local DB for CVEs that HAVE strike mappings (testable), with pagination.
-    3. Batch-load Strike names from cverf_cve_strike_mappings for each page.
-    4. Apply severity post-filter in Python (covers both v3.1 and v4.0).
+    1. Query cverf_cve_strike_mappings directly (all 2195 CVEs)
+    2. Group by CVE ID and aggregate strike names
+    3. LEFT JOIN with cves table to augment with NVD metadata when available
+    4. Return all CVEs from Cyperf (testable by definition)
 
     Returns (page_results, total_on_page).
-    On NVD failure, serves from DB-only (graceful degradation).
-    Note: Only returns testable CVEs (those with Cyperf strike mappings).
+    Note: Returns all CVEs from Cyperf regardless of NVD availability.
     """
-    # Step 1: Try to refresh DB from NVD (non-blocking on failure)
-    try:
-        nvd_cves = await fetch_latest_with_retry(nvd, days=30, limit=500)
-        for nvd_cve in nvd_cves:
-            cve_data = extract_cve_fields(nvd_cve)
-            await cache.set(cve_data["id"], cve_data)
-            await _upsert_cve(cve_data, db)
-        await db.commit()
-        logger.info("Refreshed %d CVEs from NVD into DB/cache", len(nvd_cves))
-    except NVDRateLimitError:
-        logger.warning("NVD rate-limited during /cve/latest fetch; serving from DB cache")
-    except Exception as exc:
-        logger.error("NVD fetch failed for /cve/latest: %s", exc, exc_info=True)
-
-    # Step 2: Query DB for CVEs WITH strike mappings only (INNER JOIN pattern)
-    # Get distinct CVE IDs from cverf_cve_strike_mappings, then fetch their data
     offset = (page - 1) * page_size
 
-    # Subquery: get all CVE IDs that have strike mappings
-    testable_cve_ids_subq = select(distinct(CvrfCveStrikeMappings.cve_id))
-
-    # Main query: fetch CVE data for those IDs, sorted by published_date DESC
+    # Query distinct CVE IDs from Cyperf mappings with pagination
+    # Then LEFT JOIN with CVE table to get NVD metadata when available
     stmt = (
-        select(CVE)
-        .where(CVE.id.in_(testable_cve_ids_subq))
-        .order_by(CVE.published_date.desc())
+        select(distinct(CvrfCveStrikeMappings.cve_id))
+        .order_by(CvrfCveStrikeMappings.cve_id)
         .offset(offset)
         .limit(page_size)
     )
     result = await db.execute(stmt)
-    cves = result.scalars().all()
+    cve_ids_page = [row[0] for row in result.all()]
 
-    # Step 3: Batch-load Strike names for all CVEs on this page
-    cve_ids = [cve.id for cve in cves]
-    strike_map: dict[str, list[str]] = {}
-    if cve_ids:
-        strike_stmt = select(
-            CvrfCveStrikeMappings.cve_id,
-            CvrfCveStrikeMappings.strike_name,
-        ).where(CvrfCveStrikeMappings.cve_id.in_(cve_ids))
+    if not cve_ids_page:
+        return [], 0
+
+    # For each CVE ID on this page, get its NVD metadata (if available) and all strikes
+    cve_list = []
+    for cve_id in cve_ids_page:
+        # Get CVE metadata from NVD if available
+        cve_orm = await db.get(CVE, cve_id)
+
+        # Get all strike names for this CVE
+        strike_stmt = select(CvrfCveStrikeMappings.strike_name).where(
+            CvrfCveStrikeMappings.cve_id == cve_id
+        )
         strike_result = await db.execute(strike_stmt)
-        for row in strike_result.all():
-            strike_map.setdefault(row.cve_id, []).append(row.strike_name)
+        strike_names = [row[0] for row in strike_result.all()]
 
-    cve_list = [_orm_to_dict(cve, attack_profiles=strike_map.get(cve.id, [])) for cve in cves]
+        # Build response object
+        if cve_orm:
+            # CVE has NVD metadata; use it
+            cve_dict = _orm_to_dict(cve_orm, attack_profiles=strike_names)
+        else:
+            # CVE only in Cyperf; create synthetic record
+            cve_dict = {
+                "id": cve_id,
+                "description": "CVE from Cyperf; NVD metadata not available",
+                "published_date": None,
+                "cvss_v3_score": None,
+                "cvss_v3_severity": None,
+                "cvss_v3_vector": None,
+                "cvss_v4_score": None,
+                "cvss_v4_severity": None,
+                "cvss_v4_vector": None,
+                "reference_urls": [],
+                "testable": True,
+                "attack_profiles": strike_names,
+            }
 
-    # Step 4: Apply severity filter (OR: v3.1 OR v4.0 match)
+        cve_list.append(cve_dict)
+
+    # Apply severity filter (if provided)
     if severity:
         cve_list = _filter_by_severity(cve_list, severity.upper())
 
