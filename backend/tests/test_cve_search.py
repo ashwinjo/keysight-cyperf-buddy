@@ -26,7 +26,10 @@ async def test_search_exact_id_returns_all_fields(test_client, sample_cve_dict):
     assert cve["cvss_v3_vector"] is not None
     assert isinstance(cve["reference_urls"], list)
     assert len(cve["reference_urls"]) > 0
-    assert cve["testable"] is None  # Phase 3 placeholder
+    assert isinstance(
+        cve["testable"], bool
+    )  # Phase 3.1: testable is bool (False if not in cverf_cve_strike_mappings)
+    assert isinstance(cve["attack_profiles"], list)  # Phase 3.1: attack_profiles is a list
 
 
 @pytest.mark.asyncio

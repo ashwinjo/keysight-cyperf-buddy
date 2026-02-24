@@ -203,7 +203,9 @@ def extract_cve_fields(nvd_cve: object) -> dict:
         "cvss_v4_severity": cvss_v4_severity.upper() if cvss_v4_severity else None,
         "cvss_v4_vector": cvss_v4_vector,
         "reference_urls": reference_urls,
-        "testable": None,  # Phase 3 Cyperf integration populates this
+        # Testability defaults — populated by cve_service after querying cverf_cve_strike_mappings
+        "testable": False,
+        "attack_profiles": [],
     }
 
 

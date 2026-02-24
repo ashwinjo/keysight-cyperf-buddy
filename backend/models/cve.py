@@ -11,7 +11,7 @@ Key design decisions:
 - testable: Optional[bool] is included so Phase 3 can populate it without schema change.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CVEDetail(BaseModel):
@@ -60,6 +60,19 @@ class CVEDetail(BaseModel):
         default_factory=list,
         description="All Cyperf Strike names that cover this CVE (empty list if not testable)",
     )
+
+    @field_validator("testable", mode="before")
+    @classmethod
+    def coerce_testable_none_to_false(cls, v: object) -> bool:
+        """Coerce None to False for backward compatibility with stale Redis cache entries.
+
+        Pre-Phase-3.1 cache entries stored testable=None (Phase 2 placeholder).
+        New cache entries always use bool. This validator ensures a safe transition
+        without requiring a cache flush.
+        """
+        if v is None:
+            return False
+        return bool(v)
 
 
 class CVESearchResponse(BaseModel):

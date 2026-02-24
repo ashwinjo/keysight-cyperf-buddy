@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     cyperf_sync_interval_hours: int = (
         24  # Interval in hours between Cyperf syncs (default: 24 = daily)
     )
+    cve_strikes_output_path: str | None = None  # Override path for JSON artifact
 
     class Config:
         """Pydantic settings configuration."""

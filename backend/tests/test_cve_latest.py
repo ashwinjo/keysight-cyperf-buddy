@@ -63,9 +63,7 @@ async def test_latest_severity_filter(test_client):
 
     # All returned CVEs must have HIGH severity in v3.1 or v4.0
     for cve in body["results"]:
-        has_high = (
-            cve.get("cvss_v3_severity") == "HIGH" or cve.get("cvss_v4_severity") == "HIGH"
-        )
+        has_high = cve.get("cvss_v3_severity") == "HIGH" or cve.get("cvss_v4_severity") == "HIGH"
         assert has_high, f"CVE {cve['id']} does not match HIGH severity"
 
 

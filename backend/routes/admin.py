@@ -3,12 +3,12 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import get_settings
 from database import get_db
-from db.cyperf_mapping import CyperfSupportedCVE
+from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
 from db.sync_metadata import SyncMetadata
 from models import SyncStatusResponse
 from scheduler import trigger_cyperf_sync_now
@@ -55,10 +55,11 @@ async def get_sync_status(session: AsyncSession = Depends(get_db)) -> SyncStatus
                 next_scheduled_sync=None,
             )
 
-        # Count CVEs currently in database (as of this sync)
-        stmt = select(CyperfSupportedCVE)
-        result = await session.execute(stmt)
-        cves_count = len(result.scalars().all())
+        # Count distinct CVE IDs in cverf_cve_strike_mappings
+        # Each CVE counted once regardless of how many Strikes cover it
+        count_stmt = select(func.count(distinct(CvrfCveStrikeMappings.cve_id)))
+        count_result = await session.execute(count_stmt)
+        cves_count = count_result.scalar_one() or 0
 
         return SyncStatusResponse(
             last_successful_sync=(
@@ -118,6 +119,7 @@ async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
         # This ensures consistency with scheduled jobs
         try:
             from scheduler import get_scheduler
+
             scheduler = get_scheduler()
             trigger_cyperf_sync_now(scheduler)
             logger.info("Manual sync triggered via POST /admin/sync-cyperf (queued to scheduler)")
@@ -129,9 +131,7 @@ async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
 
         except Exception as scheduler_error:
             # Scheduler might not be running; fall back to direct execution
-            logger.warning(
-                f"Scheduler not available ({scheduler_error}); executing sync directly"
-            )
+            logger.warning(f"Scheduler not available ({scheduler_error}); executing sync directly")
 
             # Option A (fallback): Call perform_sync directly
             await perform_sync(session=session, settings=settings)

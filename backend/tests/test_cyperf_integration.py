@@ -1,46 +1,63 @@
 """Integration tests for Cyperf sync functionality.
 
 This module provides comprehensive tests for:
-- CyperfService API client
-- CVE extraction logic
-- Sync orchestration with retry logic
-- Admin endpoints (sync trigger and status)
+- CyperfService API client (ApplicationResourcesApi pattern)
+- CVE extraction logic from Strike References
+- Sync orchestration with retry logic and graceful degradation
 """
 
-import asyncio
-from datetime import datetime, timedelta
+import json
+import os
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
+import asyncpg
 import pytest
 from sqlalchemy import select
 
 from config import Settings
-from database import Base, async_engine
-from db.cyperf_mapping import CyperfSupportedCVE
+from database import AsyncSessionLocal, engine
+from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
 from db.sync_metadata import SyncMetadata
 from services.cyperf_service import (
     CyperfAPIError,
     CyperfConnectionError,
     CyperfService,
-    SyncResult,
 )
 from services.sync_service import perform_sync
+
+# ============================================================================
+# Helpers
+# ============================================================================
+
+# Use the environment DATABASE_URL directly (not Settings which test conftest overrides)
+# This ensures we connect to the live PostgreSQL DB, not the in-memory SQLite test DB.
+_DB_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://cyperf_dev:cyperf_dev_password@postgres:5432/cyperf_cve_dev",
+).replace("postgresql+asyncpg://", "postgresql://")
+
+
+async def _clean_cverf_rows() -> None:
+    """Delete all rows from cverf_cve_strike_mappings and sync_metadata.
+
+    Disposes the SQLAlchemy connection pool first to release all checked-out
+    asyncpg connections, then connects directly via asyncpg for clean deletion.
+    This avoids 'another operation is in progress' pool conflicts between tests.
+    """
+    # Release all SQLAlchemy pool connections before getting a raw asyncpg connection
+    await engine.dispose()
+    conn = await asyncpg.connect(_DB_URL)
+    try:
+        await conn.execute("DELETE FROM cverf_cve_strike_mappings")
+        await conn.execute("DELETE FROM sync_metadata")
+    finally:
+        await conn.close()
 
 
 # ============================================================================
 # Fixtures
 # ============================================================================
-
-
-@pytest.fixture
-async def clean_db():
-    """Create clean database for each test."""
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture
@@ -56,386 +73,401 @@ def test_settings() -> Settings:
 
 
 @pytest.fixture
-def mock_attack_profiles() -> list[dict[str, Any]]:
-    """Mock attack profiles from Cyperf API."""
+def mock_strikes() -> list[dict[str, Any]]:
+    """Mock Strike data matching cyperf-api-wrapper get_resources_strikes() response format.
+
+    Covers: normal strikes with CVE refs, strike without CVE refs, malformed strike.
+    """
     return [
         {
-            "id": "profile-uuid-001",
-            "name": "Apache-Log4j-RCE",
-            "description": "Tests for Log4j RCE vulnerability",
-            "version": "2.0",
-            "enabled": True,
-            "cves": [
-                "CVE-2021-44228",
-                "CVE-2021-44229",
-                "CVE-2021-44230",
-            ],
-            "metadata": {
-                "attack_type": "RCE",
-                "severity": "CRITICAL",
-                "affected_systems": ["Apache", "Log4j"],
+            "Name": "Apache-Log4j-RCE",
+            "Metadata": {
+                "References": [
+                    {"Type": "CVE", "Value": "2021-44228"},
+                    {"Type": "CVE", "Value": "2021-44229"},
+                ],
             },
         },
         {
-            "id": "profile-uuid-002",
-            "name": "Microsoft-Exchange-ProxyLogon",
-            "description": "ProxyLogon vulnerabilities",
-            "version": "1.5",
-            "enabled": True,
-            "cves": [
-                "CVE-2021-26855",
-                "CVE-2021-26857",
-                "CVE-2021-26858",
-                "CVE-2021-27065",
-            ],
-            "metadata": {
-                "attack_type": "RCE",
-                "severity": "CRITICAL",
+            "Name": "Microsoft-Exchange-ProxyLogon",
+            "Metadata": {
+                "References": [
+                    {"Type": "CVE", "Value": "2021-26855"},
+                    {"Type": "CVE", "Value": "2021-26857"},
+                ],
             },
         },
         {
-            "id": "profile-uuid-003",
-            "name": "SQL-Injection-Generic",
-            "description": "Generic SQL injection tests",
-            "version": "3.1",
-            "enabled": True,
-            "cves": [
-                "CVE-2019-6102",
-                "CVE-2020-5410",
-                "CVE-2021-22911",
-            ],
-            "metadata": {
-                "attack_type": "SQL Injection",
-                "severity": "HIGH",
+            "Name": "No-CVE-Strike",
+            "Metadata": {
+                "References": [
+                    {"Type": "OTHER", "Value": "some-other-ref"},
+                ],
             },
+        },
+        {
+            "Name": "Malformed-Strike",
+            # Missing Metadata entirely -- service must log warning and skip
         },
     ]
 
 
 # ============================================================================
-# Unit Tests: CyperfService
+# Unit Tests: CyperfService fetch_cve_strike_mappings
 # ============================================================================
 
 
-class TestCyperfServiceInitialization:
-    """Test CyperfService initialization and error handling."""
+class TestCyperfServiceFetchMappings:
+    """Test CyperfService.fetch_cve_strike_mappings() using ApplicationResourcesApi pattern."""
 
-    def test_init_success_with_valid_credentials(self, test_settings):
-        """Test successful initialization with mock client."""
-        with patch("services.cyperf_service.CyperfApiClient") as mock_client:
-            service = CyperfService(
-                controller_ip=test_settings.cyperf_controller_ip,
-                username=test_settings.cyperf_username,
-                password=test_settings.cyperf_password,
-            )
+    def _make_page_response(self, strikes: list[dict]) -> MagicMock:
+        """Build a mock API response that returns strikes via to_json()."""
+        mock_response = MagicMock()
+        mock_response.to_json.return_value = json.dumps({"data": strikes})
+        return mock_response
 
-            assert service.controller_ip == test_settings.cyperf_controller_ip
-            assert service.username == test_settings.cyperf_username
-            assert service.password == test_settings.cyperf_password
-            assert service.client is not None
-
-    def test_init_fails_without_cyperf_api_wrapper(self, test_settings):
-        """Test initialization fails when cyperf-api-wrapper not available."""
-        with patch(
-            "services.cyperf_service.CyperfApiClient",
-            side_effect=ImportError("No module named 'cyperf_api_wrapper'"),
-        ):
-            with pytest.raises(CyperfConnectionError) as exc_info:
-                CyperfService(
-                    controller_ip=test_settings.cyperf_controller_ip,
-                    username=test_settings.cyperf_username,
-                    password=test_settings.cyperf_password,
-                )
-
-            assert "cyperf-api-wrapper import failed" in str(exc_info.value)
-
-
-class TestCyveCVEExtraction:
-    """Test CVE extraction from attack profiles."""
-
-    def test_extract_cves_from_simple_profiles(self, test_settings, mock_attack_profiles):
-        """Test extraction from profiles with direct CVE list."""
-        with patch("services.cyperf_service.CyperfApiClient"):
-            service = CyperfService(
-                controller_ip=test_settings.cyperf_controller_ip,
-                username=test_settings.cyperf_username,
-                password=test_settings.cyperf_password,
-            )
-
-            mappings = service.extract_cves_from_profiles(mock_attack_profiles)
-
-            # Verify expected mappings
-            assert mappings["CVE-2021-44228"] == "Apache-Log4j-RCE"
-            assert mappings["CVE-2021-44229"] == "Apache-Log4j-RCE"
-            assert mappings["CVE-2021-26855"] == "Microsoft-Exchange-ProxyLogon"
-            assert mappings["CVE-2019-6102"] == "SQL-Injection-Generic"
-
-            # Verify total count
-            assert len(mappings) == 11
-
-    def test_extract_cves_from_metadata(self, test_settings):
-        """Test extraction from profiles with CVEs in metadata."""
-        profiles = [
-            {
-                "name": "Profile-With-Metadata",
-                "metadata": {
-                    "cves": ["CVE-2020-1234", "CVE-2020-5678"],
-                },
-            }
-        ]
-
-        with patch("services.cyperf_service.CyperfApiClient"):
-            service = CyperfService(
-                controller_ip=test_settings.cyperf_controller_ip,
-                username=test_settings.cyperf_username,
-                password=test_settings.cyperf_password,
-            )
-
-            mappings = service.extract_cves_from_profiles(profiles)
-
-            assert mappings["CVE-2020-1234"] == "Profile-With-Metadata"
-            assert mappings["CVE-2020-5678"] == "Profile-With-Metadata"
-
-    def test_extract_handles_malformed_cve_data(self, test_settings):
-        """Test extraction gracefully handles malformed CVE data."""
-        profiles = [
-            {
-                "name": "Mixed-CVE-Formats",
-                "cves": [
-                    "CVE-2021-44228",  # String
-                    None,  # None
-                    "",  # Empty string
-                    {"id": "CVE-2021-44229"},  # Dict with 'id'
-                    {"cve_id": "CVE-2021-44230"},  # Dict with 'cve_id'
-                    {"invalid": "data"},  # Invalid dict
-                    42,  # Number (will be converted to string)
-                ],
-            }
-        ]
-
-        with patch("services.cyperf_service.CyperfApiClient"):
-            service = CyperfService(
-                controller_ip=test_settings.cyperf_controller_ip,
-                username=test_settings.cyperf_username,
-                password=test_settings.cyperf_password,
-            )
-
-            mappings = service.extract_cves_from_profiles(profiles)
-
-            # Should extract valid CVEs
-            assert mappings["CVE-2021-44228"] == "Mixed-CVE-Formats"
-            assert mappings["CVE-2021-44229"] == "Mixed-CVE-Formats"
-            assert mappings["CVE-2021-44230"] == "Mixed-CVE-Formats"
-
-            # Should skip invalid entries silently
-            assert len(mappings) == 3
-
-
-class TestCyperfServiceSync:
-    """Test full sync operation with retry logic."""
+    def _make_empty_response(self) -> MagicMock:
+        """Build a mock API response with no strikes (signals end of pagination)."""
+        mock_response = MagicMock()
+        mock_response.to_json.return_value = json.dumps({"data": []})
+        return mock_response
 
     @pytest.mark.asyncio
-    async def test_sync_success(self, test_settings, mock_attack_profiles):
-        """Test successful sync with all profiles fetched."""
-        with patch(
-            "services.cyperf_service.CyperfApiClient"
-        ) as mock_client_class:
-            mock_instance = MagicMock()
-            mock_instance.get_all_attack_profiles.return_value = mock_attack_profiles
-            mock_client_class.return_value = mock_instance
+    async def test_fetch_mappings_extracts_cves_correctly(self, test_settings, mock_strikes):
+        """CVE IDs have CVE- prefix prepended: Value='2021-44228' -> 'CVE-2021-44228'."""
+        page1_response = self._make_page_response(mock_strikes)
+        empty_response = self._make_empty_response()
 
-            service = CyperfService(
-                controller_ip=test_settings.cyperf_controller_ip,
-                username=test_settings.cyperf_username,
-                password=test_settings.cyperf_password,
-            )
-
-            result = await service.sync_cyperf_cves()
-
-            assert result.error is None
-            assert result.profiles_fetched == 3
-            assert result.cves_extracted == 11
-
-    @pytest.mark.asyncio
-    async def test_sync_handles_connection_error(self, test_settings):
-        """Test sync gracefully handles connection errors."""
-        with patch(
-            "services.cyperf_service.CyperfApiClient"
-        ) as mock_client_class:
-            mock_instance = MagicMock()
-            mock_instance.get_all_attack_profiles.side_effect = ConnectionError(
-                "Connection refused"
-            )
-            mock_client_class.return_value = mock_instance
-
-            service = CyperfService(
-                controller_ip=test_settings.cyperf_controller_ip,
-                username=test_settings.cyperf_username,
-                password=test_settings.cyperf_password,
-            )
-
-            result = await service.sync_cyperf_cves()
-
-            assert result.error is not None
-            assert "Connection" in result.error
-            assert result.profiles_fetched == 0
-            assert result.cves_extracted == 0
-
-    @pytest.mark.asyncio
-    async def test_sync_handles_auth_error(self, test_settings):
-        """Test sync detects and reports authentication errors."""
-        with patch(
-            "services.cyperf_service.CyperfApiClient"
-        ) as mock_client_class:
-            mock_instance = MagicMock()
-            mock_instance.get_all_attack_profiles.side_effect = Exception(
-                "401 Unauthorized"
-            )
-            mock_client_class.return_value = mock_instance
-
-            service = CyperfService(
-                controller_ip=test_settings.cyperf_controller_ip,
-                username=test_settings.cyperf_username,
-                password=test_settings.cyperf_password,
-            )
-
-            result = await service.sync_cyperf_cves()
-
-            assert result.error is not None
-            assert "Authentication" in result.error
-
-
-# ============================================================================
-# Integration Tests: Sync Service
-# ============================================================================
-
-
-class TestPerformSync:
-    """Test full sync orchestration with database recording."""
-
-    @pytest.mark.asyncio
-    async def test_perform_sync_success(
-        self, clean_db, test_settings, mock_attack_profiles
-    ):
-        """Test successful sync records data in database."""
-        from database import get_db_session
-
-        session = await get_db_session()
-
-        # Patch CyperfService
-        with patch("services.sync_service.CyperfService") as mock_service_class:
-            mock_service = MagicMock()
-            mock_service.fetch_attack_profiles.return_value = mock_attack_profiles
-            mock_service.extract_cves_from_profiles.return_value = {
-                "CVE-2021-44228": "Apache-Log4j-RCE",
-                "CVE-2021-44229": "Apache-Log4j-RCE",
-                "CVE-2021-26855": "Microsoft-Exchange-ProxyLogon",
-            }
-            mock_service_instance = AsyncMock()
-            mock_service_instance.sync_cyperf_cves.return_value = SyncResult(
-                profiles_fetched=2,
-                cves_extracted=3,
-                error=None,
-            )
-            mock_service_instance.fetch_attack_profiles.return_value = mock_attack_profiles
-            mock_service_instance.extract_cves_from_profiles.return_value = {
-                "CVE-2021-44228": "Apache-Log4j-RCE",
-                "CVE-2021-44229": "Apache-Log4j-RCE",
-                "CVE-2021-26855": "Microsoft-Exchange-ProxyLogon",
-            }
-            mock_service_class.return_value = mock_service_instance
-
-            # Mock CVE creation (foreign key will be satisfied)
-            from db.cve import CVE
-
-            for cve_id in ["CVE-2021-44228", "CVE-2021-44229", "CVE-2021-26855"]:
-                cve = CVE(
-                    id=cve_id,
-                    description="Test CVE",
-                    published_date=datetime.utcnow(),
-                )
-                session.add(cve)
-            await session.commit()
-
-            # Run sync
-            await perform_sync(session, test_settings)
-
-            # Verify sync metadata recorded
-            metadata = await SyncMetadata.get_last_sync_status(session)
-            assert metadata is not None
-            assert metadata.status == "success"
-            assert metadata.profiles_synced == 2
-
-            # Verify CVE mappings recorded
-            result = await session.execute(select(CyperfSupportedCVE))
-            cves = result.scalars().all()
-            assert len(cves) == 3
-            assert cves[0].attack_profile_name in [
-                "Apache-Log4j-RCE",
-                "Microsoft-Exchange-ProxyLogon",
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = [
+                page1_response,
+                empty_response,
             ]
 
-        await session.close()
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+            result = await service.fetch_cve_strike_mappings()
+
+        # Verify CVE ID prefixing
+        assert "CVE-2021-44228" in result
+        assert "CVE-2021-44229" in result
+        assert "CVE-2021-26855" in result
+        assert "CVE-2021-26857" in result
+
+        # Verify Strike names are values
+        assert result["CVE-2021-44228"] == "Apache-Log4j-RCE"
+        assert result["CVE-2021-26855"] == "Microsoft-Exchange-ProxyLogon"
 
     @pytest.mark.asyncio
-    async def test_perform_sync_failure_retains_old_data(
-        self, clean_db, test_settings
-    ):
-        """Test sync failure retains previous CVE data."""
-        from database import get_db_session
+    async def test_fetch_mappings_skips_non_cve_references(self, test_settings, mock_strikes):
+        """References with Type != 'CVE' are excluded from the result."""
+        page1_response = self._make_page_response(mock_strikes)
+        empty_response = self._make_empty_response()
 
-        session = await get_db_session()
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = [
+                page1_response,
+                empty_response,
+            ]
 
-        # Insert old data
-        from db.cve import CVE
-
-        old_cve = CVE(id="CVE-2020-0001", description="Old CVE", published_date=datetime.utcnow())
-        session.add(old_cve)
-
-        old_mapping = CyperfSupportedCVE(
-            cve_id="CVE-2020-0001",
-            attack_profile_name="Old-Profile",
-            last_synced=datetime.utcnow() - timedelta(days=1),
-        )
-        session.add(old_mapping)
-        await session.commit()
-
-        # Patch CyperfService to fail
-        with patch("services.sync_service.CyperfService") as mock_service_class:
-            mock_service_instance = AsyncMock()
-            mock_service_instance.sync_cyperf_cves.return_value = SyncResult(
-                profiles_fetched=0,
-                cves_extracted=0,
-                error="Connection failed",
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
             )
-            mock_service_class.return_value = mock_service_instance
+            result = await service.fetch_cve_strike_mappings()
 
-            # Run sync (will fail)
-            await perform_sync(session, test_settings)
+        # No-CVE-Strike has only Type=OTHER references -- must not appear in result values
+        assert "No-CVE-Strike" not in result.values()
 
-            # Verify old data still exists
-            result = await session.execute(select(CyperfSupportedCVE))
-            cves = result.scalars().all()
-            assert len(cves) == 1
-            assert cves[0].cve_id == "CVE-2020-0001"
+    @pytest.mark.asyncio
+    async def test_fetch_mappings_skips_malformed_strikes(self, test_settings, mock_strikes):
+        """Strike with missing Metadata is skipped (warning logged), not an exception."""
+        page1_response = self._make_page_response(mock_strikes)
+        empty_response = self._make_empty_response()
 
-            # Verify failure recorded
-            metadata = await SyncMetadata.get_last_sync_status(session)
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = [
+                page1_response,
+                empty_response,
+            ]
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+            # Should not raise even with malformed Malformed-Strike in the batch
+            result = await service.fetch_cve_strike_mappings()
+
+        # Malformed-Strike has no Metadata; must not appear in result values
+        assert "Malformed-Strike" not in result.values()
+        # Valid CVEs from other strikes must still be present
+        assert "CVE-2021-44228" in result
+
+    @pytest.mark.asyncio
+    async def test_fetch_mappings_paginates_correctly(self, test_settings):
+        """Pagination: first call returns strikes, second call returns empty (stop signal)."""
+        page1_strikes = [
+            {
+                "Name": "Strike-A",
+                "Metadata": {"References": [{"Type": "CVE", "Value": "2024-0001"}]},
+            },
+        ]
+        page1_response = MagicMock()
+        page1_response.to_json.return_value = json.dumps({"data": page1_strikes})
+        empty_response = MagicMock()
+        empty_response.to_json.return_value = json.dumps({"data": []})
+
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = [
+                page1_response,
+                empty_response,
+            ]
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+            result = await service.fetch_cve_strike_mappings()
+
+        assert "CVE-2024-0001" in result
+        assert result["CVE-2024-0001"] == "Strike-A"
+        # Should have called get_resources_strikes exactly twice (page1 + empty terminator)
+        assert mock_api_instance.get_resources_strikes.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_fetch_mappings_handles_connection_error(self, test_settings):
+        """ConnectionError from API raises CyperfConnectionError."""
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = ConnectionError(
+                "Connection refused"
+            )
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+
+            with pytest.raises(CyperfConnectionError):
+                await service.fetch_cve_strike_mappings()
+
+    @pytest.mark.asyncio
+    async def test_fetch_mappings_handles_auth_error(self, test_settings):
+        """Exception with '401 Unauthorized' raises CyperfAPIError with 'Authentication failed'."""
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = Exception("401 Unauthorized")
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+
+            with pytest.raises(CyperfAPIError) as exc_info:
+                await service.fetch_cve_strike_mappings()
+
+            assert "Authentication failed" in str(exc_info.value)
+
+
+# ============================================================================
+# Integration Tests: Sync Service (new cverf_cve_strike_mappings schema)
+# ============================================================================
+
+
+class TestPerformSyncRefactored:
+    """Test perform_sync() against the new cverf_cve_strike_mappings table.
+
+    Uses the live PostgreSQL DB (AsyncSessionLocal).
+    Each test performs setup/teardown via raw asyncpg to bypass SQLAlchemy pool state.
+    """
+
+    def _page(self, strikes: list[dict]) -> MagicMock:
+        r = MagicMock()
+        r.to_json.return_value = json.dumps({"data": strikes})
+        return r
+
+    def _empty_page(self) -> MagicMock:
+        r = MagicMock()
+        r.to_json.return_value = json.dumps({"data": []})
+        return r
+
+    def _patch_cyperf(self, strikes_side_effect):
+        """Return context manager patching cyperf module with given side_effect."""
+        mock_cyperf = MagicMock()
+        mock_api_client = MagicMock()
+        mock_api_instance = MagicMock()
+        mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+        mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+        mock_api_instance.get_resources_strikes.side_effect = strikes_side_effect
+        return patch("services.cyperf_service.cyperf", mock_cyperf)
+
+    @pytest.mark.asyncio
+    async def test_perform_sync_full_replace_removes_old_data(self, test_settings):
+        """Full-replace: old cverf_cve_strike_mappings rows are gone after successful sync."""
+        await _clean_cverf_rows()
+
+        async with AsyncSessionLocal() as session:
+            session.add(CvrfCveStrikeMappings(cve_id="CVE-2020-0001", strike_name="Old-Strike"))
+            await session.commit()
+
+            with self._patch_cyperf(
+                [
+                    self._page(
+                        [
+                            {
+                                "Name": "New-Strike",
+                                "Metadata": {"References": [{"Type": "CVE", "Value": "2024-9999"}]},
+                            }
+                        ]
+                    ),
+                    self._empty_page(),
+                ]
+            ):
+                await perform_sync(session, test_settings)
+
+            result = await session.execute(select(CvrfCveStrikeMappings))
+            rows = result.scalars().all()
+
+        cve_ids = {r.cve_id for r in rows}
+        assert "CVE-2020-0001" not in cve_ids, "Old row must be replaced by full-replace sync"
+        assert "CVE-2024-9999" in cve_ids, "New row must be inserted by sync"
+
+        await _clean_cverf_rows()
+
+    @pytest.mark.asyncio
+    async def test_perform_sync_failure_retains_old_cverf_mappings(self, test_settings):
+        """On sync failure, existing cverf_cve_strike_mappings rows are retained."""
+        await _clean_cverf_rows()
+
+        async with AsyncSessionLocal() as session:
+            session.add(CvrfCveStrikeMappings(cve_id="CVE-2021-1111", strike_name="Stable-Strike"))
+            await session.commit()
+
+            with self._patch_cyperf(ConnectionError("Controller unreachable")):
+                await perform_sync(session, test_settings)
+
+            result = await session.execute(select(CvrfCveStrikeMappings))
+            rows = result.scalars().all()
+            cve_ids = {r.cve_id for r in rows}
+            assert "CVE-2021-1111" in cve_ids, "Existing rows must survive a failed sync"
+
+            metadata = await SyncMetadata.get_last_sync_status(session, job_name="cyperf_profiles")
+            assert metadata is not None
             assert metadata.status == "failed"
-            assert "Connection" in metadata.error_message
 
-        await session.close()
+        await _clean_cverf_rows()
 
+    @pytest.mark.asyncio
+    async def test_perform_sync_records_metadata_on_success(self, test_settings):
+        """Successful sync records SyncMetadata with status='success'."""
+        await _clean_cverf_rows()
 
-# ============================================================================
-# Test Helpers
-# ============================================================================
+        async with AsyncSessionLocal() as session:
+            with self._patch_cyperf(
+                [
+                    self._page(
+                        [
+                            {
+                                "Name": "Success-Strike",
+                                "Metadata": {"References": [{"Type": "CVE", "Value": "2024-1234"}]},
+                            }
+                        ]
+                    ),
+                    self._empty_page(),
+                ]
+            ):
+                await perform_sync(session, test_settings)
 
+            metadata = await SyncMetadata.get_last_sync_status(session, job_name="cyperf_profiles")
+            assert metadata is not None
+            assert metadata.status == "success"
 
-def test_sync_metadata_circuit_breaker():
-    """Test circuit breaker detection for consecutive failures."""
-    # Note: This would require mock database session
-    # Implementation shown in perform_sync tests above
+        await _clean_cverf_rows()
+
+    @pytest.mark.asyncio
+    async def test_perform_sync_writes_json_artifact(self, test_settings, tmp_path):
+        """Successful sync writes cve_strikes.json artifact with correct format."""
+        await _clean_cverf_rows()
+
+        json_path = str(tmp_path / "cve_strikes.json")
+        test_settings_with_path = Settings(
+            cyperf_controller_ip=test_settings.cyperf_controller_ip,
+            cyperf_username=test_settings.cyperf_username,
+            cyperf_password=test_settings.cyperf_password,
+            cyperf_sync_interval_hours=test_settings.cyperf_sync_interval_hours,
+            database_url=test_settings.database_url,
+            cve_strikes_output_path=json_path,
+        )
+
+        async with AsyncSessionLocal() as session:
+            with self._patch_cyperf(
+                [
+                    self._page(
+                        [
+                            {
+                                "Name": "Json-Strike",
+                                "Metadata": {
+                                    "References": [
+                                        {"Type": "CVE", "Value": "2024-5555"},
+                                        {"Type": "CVE", "Value": "2024-6666"},
+                                    ]
+                                },
+                            }
+                        ]
+                    ),
+                    self._empty_page(),
+                ]
+            ):
+                await perform_sync(session, test_settings_with_path)
+
+        assert os.path.exists(json_path), "JSON artifact must be created after successful sync"
+
+        with open(json_path) as f:
+            artifact = json.load(f)
+
+        assert isinstance(artifact, dict)
+        assert "CVE-2024-5555" in artifact
+        assert "CVE-2024-6666" in artifact
+        assert artifact["CVE-2024-5555"] == "Json-Strike"
+
+        await _clean_cverf_rows()
 
 
 # ============================================================================
