@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-24
-**Session:** Phase 4.1 Plan 04 executed - Backend unit tests for email service and contact endpoint
+**Session:** Phase 4.1 Plan 05 executed - E2E integration test, SMTP stubs, .env.example docs
 
 ---
 
@@ -18,8 +18,8 @@
 ## Current Position
 
 **Active Phase:** 4.1
-**Active Plan:** 04.1-04-PLAN (complete)
-**Status:** In progress — Plans 01-04 complete, Plan 05 pending
+**Active Plan:** 04.1-05-PLAN (complete)
+**Status:** Phase 4.1 complete — all 5 plans executed
 
 **Progress:**
 [██████████] 100%
@@ -28,7 +28,7 @@ Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/
 Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
 Phase 3.1 [Cyperf CVE Ingestion Refactor]          [x] Complete (8/8 tasks, 3/3 plans)
 Phase 4 [Frontend UI]                              [x] Complete (all backend APIs complete)
-Phase 4.1 [Sales Funnel]                           [~] In Progress (4/5 plans: 04.1-01 through 04.1-04 complete)
+Phase 4.1 [Sales Funnel]                           [x] Complete (5/5 plans: 04.1-01 through 04.1-05 complete)
 Phase 5 [Batch Processing + Export]                [ ] Not started (depends on Phase 2 + 3 + 4)
 
 Overall: 3/5 phases complete (60%)
@@ -182,7 +182,7 @@ None currently. Phases 1-3 complete and operational.
 
 ## Next Actions
 
-**Phase 4.1 IN PROGRESS.** Plans 04.1-01 through 04.1-04 complete. Ready to execute Plan 04.1-05 next.
+**Phase 4.1 COMPLETE.** All 5 plans executed. Sales funnel (contact form → email delivery) is production-ready pending SMTP credential provisioning.
 
 ### Option A: Execute Phase 4 (Frontend UI)
 - Build React SPA with Vite + Tailwind + shadcn/ui
