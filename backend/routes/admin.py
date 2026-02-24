@@ -103,7 +103,7 @@ async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
         HTTP 202 Accepted with status="sync_triggered" message
 
     Raises:
-        HTTPException 500: If scheduler is not running
+        HTTPException 500: If scheduler is not running and sync execution fails
 
     Note:
         This endpoint returns immediately (async); the actual sync happens in background.
@@ -117,24 +117,28 @@ async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
         # Option B (recommended): Queue manual sync job to scheduler
         # This ensures consistency with scheduled jobs
         try:
-            trigger_cyperf_sync_now()
-            logger.info("Manual sync triggered via POST /admin/sync-cyperf")
+            from scheduler import get_scheduler
+            scheduler = get_scheduler()
+            trigger_cyperf_sync_now(scheduler)
+            logger.info("Manual sync triggered via POST /admin/sync-cyperf (queued to scheduler)")
 
             return {
                 "status": "sync_triggered",
                 "message": "Cyperf sync queued for immediate execution",
             }
 
-        except Exception:
+        except Exception as scheduler_error:
             # Scheduler might not be running; fall back to direct execution
-            logger.warning("Scheduler not running; executing sync directly")
+            logger.warning(
+                f"Scheduler not available ({scheduler_error}); executing sync directly"
+            )
 
             # Option A (fallback): Call perform_sync directly
             await perform_sync(session=session, settings=settings)
 
             return {
                 "status": "sync_completed",
-                "message": "Cyperf sync completed immediately",
+                "message": "Cyperf sync completed immediately (scheduler not running)",
             }
 
     except Exception as e:
