@@ -6,9 +6,12 @@ interface DataTableProps {
   isLoading: boolean;
   onSort: (column: SortState['column']) => void;
   sortState: SortState;
+  // Optional: if provided, renders a per-row action column
+  onRowAction?: (cve: CVEResponse) => void;
+  rowActionLabel?: string;
 }
 
-export default function DataTable({ data, isLoading, onSort, sortState }: DataTableProps) {
+export default function DataTable({ data, isLoading, onSort, sortState, onRowAction, rowActionLabel }: DataTableProps) {
   const getSortIcon = (column: SortState['column']) => {
     if (sortState.column !== column) return ' \u2195';
     return sortState.direction === 'asc' ? ' \u2191' : ' \u2193';
@@ -49,6 +52,11 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
             <th className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase">
               Cyperf Profiles
             </th>
+            {onRowAction && (
+              <th className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase">
+                Action
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-luxury-border">
@@ -74,6 +82,16 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
                   <span className="text-luxury-text-secondary/60">—</span>
                 )}
               </td>
+              {onRowAction && (
+                <td className="px-6 py-4">
+                  <button
+                    onClick={() => onRowAction(cve)}
+                    className="px-3 py-1.5 text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white rounded transition-colors whitespace-nowrap"
+                  >
+                    {rowActionLabel ?? "Let's Discuss"}
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
