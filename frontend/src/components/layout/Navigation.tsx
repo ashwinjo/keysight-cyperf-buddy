@@ -15,9 +15,10 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: '/', label: 'Search' },
-  { path: '/browse', label: 'Browse' },
-  { path: '/batch', label: 'Batch' },
+  { path: '/', label: 'NVD_Search' },
+  { path: '/browse', label: 'Cyperf Non-AI CVEs' },
+  { path: '/ai-cves', label: 'Cyperf AI CVEs' },
+  { path: '/what-is-cyperf', label: 'What is Cyperf' },
 ];
 
 export default function Navigation() {
@@ -66,7 +67,7 @@ export default function Navigation() {
                 <a
                   key={path}
                   href={path}
-                  className={`text-sm font-semibold tracking-luxury uppercase transition-all duration-200 relative
+                  className={`text-sm font-semibold tracking-luxury transition-all duration-200 relative
                     after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0
                     after:bg-luxury-accent after:transition-all after:duration-300
                     ${
