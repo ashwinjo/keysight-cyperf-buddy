@@ -12,7 +12,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { CVEResponse, SyncStatusResponse, BrowseListResponse } from '../types/api';
+import { CVEResponse, SyncStatusResponse, BrowseListResponse, AiCVEResponse } from '../types/api';
 
 // Use /api proxy (configured in vite.config.ts to proxy to http://localhost:8000)
 // This avoids CORS issues when running in the browser
@@ -84,7 +84,24 @@ export const useLatestCVEs = (page = 1, pageSize = 25) => {
   });
 };
 
-// Hook 3: Fetch sync status for StatusBar footer and StaleDataWarning banner
+// Hook 3: Fetch AI-generated CVEs from the ai_cves table
+// Returns a flat list of AI CVE records. Endpoint may not yet be implemented —
+// axios will throw a 404/500 which react-query surfaces as an error state.
+export const useAiCVEs = () => {
+  return useQuery({
+    queryKey: ['cve', 'ai-cves'],
+    queryFn: async () => {
+      const res = await axios.get<{ results: AiCVEResponse[]; total: number }>(
+        `${API_BASE}/ai-cves`
+      );
+      return res.data.results || [];
+    },
+    staleTime: 1000 * 60 * 5,  // 5 minutes
+    retry: 1,                   // Single retry — surface errors fast if endpoint absent
+  });
+};
+
+// Hook 4: Fetch sync status for StatusBar footer and StaleDataWarning banner
 // Short staleTime + auto-refetch to keep warning banner accurate
 export const useSyncStatus = () => {
   return useQuery({

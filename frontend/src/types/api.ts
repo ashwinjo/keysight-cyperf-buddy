@@ -23,6 +23,16 @@ export interface CVEResponse {
   attack_profiles: string[];           // All Cyperf strike names for this CVE
 }
 
+// AI CVE entry from the ai_cves table (Cyperf AI-generated attack variants)
+export interface AiCVEResponse {
+  id: string;                        // CVE-XXXX-XXXXX (source CVE)
+  description: string;               // AI-generated or source CVE description
+  severity: string | null;           // e.g. "HIGH", "CRITICAL" — from ai_cves record
+  cvss_score: number | null;         // Optional CVSS score if available
+  ai_strike_name: string | null;     // AI-generated strike identifier
+  generated_at: string | null;       // ISO 8601 timestamp when AI entry was created
+}
+
 export interface BrowseListResponse {
   cves: CVEResponse[];
   total: number;
