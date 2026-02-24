@@ -4,15 +4,14 @@ import { SortState, CVEResponse } from '../types/api';
 import TestableFilter from '../components/pages/TestableFilter';
 import DataTable from '../components/shared/DataTable';
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 1000; // Load all CVEs at once
 
 export default function BrowsePage() {
   const [searchInput, setSearchInput] = useState('');
-  const [page, setPage] = useState(1);
-  const [onlyTestable, setOnlyTestable] = useState(false);
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
 
-  const { data: browseResult, isLoading } = useLatestCVEs(page, PAGE_SIZE, onlyTestable);
+  // Always load from page 1 with large page size to get all CVEs
+  const { data: browseResult, isLoading } = useLatestCVEs(1, PAGE_SIZE, false);
 
   const tableData = browseResult?.cves || [];
   const total = browseResult?.total || 0;
@@ -40,14 +39,6 @@ export default function BrowsePage() {
     }
   };
 
-  const handleNextPage = () => {
-    if (hasNext) setPage(page + 1);
-  };
-
-  const handlePrevPage = () => {
-    if (page > 1) setPage(page - 1);
-  };
-
   return (
     <div>
       <h1 className="text-3xl font-bold text-white mb-6">Browse All CVEs & Cyperf Strikes</h1>
@@ -67,14 +58,10 @@ export default function BrowsePage() {
           />
         </div>
 
-        {/* Filters */}
-        <TestableFilter checked={onlyTestable} onChange={setOnlyTestable} />
-
         {/* Stats */}
         <p className="text-xs text-gray-400">
-          Showing {filteredData.length} of {tableData.length} CVEs on this page
-          {onlyTestable && ' (testable only)'}
-          {searchInput && ` • Filtered by: "${searchInput}"`}
+          Total CVEs in database: <span className="font-semibold text-white">{tableData.length}</span>
+          {searchInput && ` • Matching your search: ${filteredData.length}`}
         </p>
       </div>
 
@@ -84,28 +71,6 @@ export default function BrowsePage() {
         sortState={sortState}
         onSort={handleSort}
       />
-
-      <div className="mt-6 flex justify-between items-center">
-        <button
-          onClick={handlePrevPage}
-          disabled={page === 1 || isLoading}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded transition"
-        >
-          &larr; Previous
-        </button>
-
-        <span className="text-gray-400 text-sm">
-          Page {page} of {Math.ceil(total / PAGE_SIZE)}
-        </span>
-
-        <button
-          onClick={handleNextPage}
-          disabled={!hasNext || isLoading}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white rounded transition"
-        >
-          Next &rarr;
-        </button>
-      </div>
     </div>
   );
 }
