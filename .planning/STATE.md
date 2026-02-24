@@ -156,6 +156,14 @@ None currently. Phases 1-3 complete and operational.
 
 ---
 
+## Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Browse tab shows only synced CVEs with Cyperf strikes | 2026-02-24 | 46d196d | [1-browse-tab-shows-only-synced-cves-with-c](./quick/1-browse-tab-shows-only-synced-cves-with-c/) |
+
+---
+
 ## Next Actions
 
 **Phase 3.1 COMPLETE.** All backend APIs ready. Ready to execute:
