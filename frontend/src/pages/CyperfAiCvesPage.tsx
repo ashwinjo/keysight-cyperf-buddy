@@ -87,10 +87,10 @@ export default function CyperfAiCvesPage() {
     <div className="space-y-8 animate-in">
       <div>
         <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
-          Cyperf non-CVEs Strikes (AI Strikes included)
+          Non CVE Strikes
         </h1>
         <p className="text-luxury-text-secondary tracking-tight">
-          AI-generated attack variants and non-CVE strikes produced by Cyperf
+          AI-generated and non-CVE attack variants from Cyperf
         </p>
       </div>
 
@@ -119,7 +119,7 @@ export default function CyperfAiCvesPage() {
       {isError && !isEndpointMissing && (
         <div className="card-luxury border border-red-700/40 space-y-2">
           <p className="text-xs tracking-luxury uppercase text-red-400 font-semibold">
-            Error Loading AI CVEs
+            Error Loading Non-CVE Strikes
           </p>
           <p className="text-luxury-text-secondary text-sm">
             {error instanceof Error ? error.message : 'An unexpected error occurred.'}
