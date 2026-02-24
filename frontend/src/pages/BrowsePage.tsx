@@ -8,22 +8,18 @@ const PAGE_SIZE = 500; // Backend max limit per page
 export default function BrowsePage() {
   const [searchInput, setSearchInput] = useState('');
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showOnlyTestable, setShowOnlyTestable] = useState(false);
 
-  // Load CVEs from database with Cyperf strike information
-  // The database contains CVE-to-Strike mappings synced from Cyperf
-  // Note: Testable CVEs are from older years (pre-2026); browse pages to find them
-  const { data: browseResult, isLoading } = useLatestCVEs(currentPage, PAGE_SIZE);
+  // Load all CVEs from database with Cyperf strike information
+  // Show ONLY synced CVEs (testable = true)
+  const { data: browseResult, isLoading } = useLatestCVEs(1, PAGE_SIZE);
 
   const tableData = browseResult?.cves || [];
-  const total = browseResult?.total || 0;
 
-  // Client-side filtering: search + testable filter
+  // Client-side filtering: search + always filter to testable only
   const filteredData = useMemo(() => {
-    let results = tableData;
+    let results = tableData.filter((cve: CVEResponse) => cve.testable === true);
 
-    // Apply search filter
+    // Apply search filter (CVE ID or strike name)
     if (searchInput.trim()) {
       const query = searchInput.toLowerCase();
       results = results.filter((cve: CVEResponse) =>
@@ -32,13 +28,8 @@ export default function BrowsePage() {
       );
     }
 
-    // Apply testable filter
-    if (showOnlyTestable) {
-      results = results.filter((cve: CVEResponse) => cve.testable === true);
-    }
-
     return results;
-  }, [tableData, searchInput, showOnlyTestable]);
+  }, [tableData, searchInput]);
 
   const handleSort = (column: SortState['column']) => {
     if (sortState.column === column) {
@@ -56,10 +47,10 @@ export default function BrowsePage() {
     <div className="space-y-8 animate-in">
       <div>
         <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
-          Browse CVEs
+          Synced CVEs
         </h1>
         <p className="text-luxury-text-secondary tracking-tight">
-          Explore the CVE database with Cyperf testability status. Testable CVEs are from years 2023 and earlier.
+          CVEs available for testing with Cyperf (synced from Cyperf instance)
         </p>
       </div>
 
@@ -67,76 +58,29 @@ export default function BrowsePage() {
         {/* Search Input */}
         <div>
           <label className="block text-sm font-semibold text-luxury-text mb-3 tracking-tight">
-            Search by CVE ID or Test Profile
+            Search by CVE ID or Strike Name
           </label>
           <input
             type="text"
-            placeholder="e.g., CVE-2023-26360 or nginx"
+            placeholder="e.g., CVE-2023-26360 or Adobe"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="input-luxury w-full"
           />
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-6 pt-4 border-t border-luxury-border">
-          <label className="flex items-center gap-3 cursor-pointer group">
-            <input
-              type="checkbox"
-              checked={showOnlyTestable}
-              onChange={(e) => {
-                setShowOnlyTestable(e.target.checked);
-                setCurrentPage(1); // Reset to first page when filtering
-              }}
-              className="w-5 h-5 rounded bg-luxury-bg-subtle border border-luxury-border cursor-pointer accent-luxury-accent transition-all hover:border-luxury-accent"
-            />
-            <span className="text-sm font-semibold text-luxury-text tracking-tight group-hover:text-luxury-accent transition-colors">
-              Show Testable Only
-            </span>
-          </label>
-        </div>
-
-        {/* Stats and Pagination */}
-        <div className="space-y-4 pt-4 border-t border-luxury-border">
-          <div className="flex items-center justify-between text-xs tracking-tight">
-            <div className="space-y-1">
-              <p className="text-luxury-text-secondary uppercase tracking-luxury">Showing Results</p>
-              <p className="text-sm text-luxury-text">
-                Page {currentPage} • {filteredData.length} of {tableData.length} total on this page
-                {showOnlyTestable && ` (filtered to testable only)`}
-              </p>
+        {/* Stats */}
+        <div className="flex items-center gap-6 text-xs tracking-tight border-t border-luxury-border pt-4">
+          <div>
+            <p className="text-luxury-text-secondary uppercase tracking-luxury mb-1">Synced CVEs</p>
+            <p className="text-lg font-semibold text-luxury-accent">{filteredData.length}</p>
+          </div>
+          {searchInput && (
+            <div>
+              <p className="text-luxury-text-secondary uppercase tracking-luxury mb-1">Matching Results</p>
+              <p className="text-lg font-semibold text-luxury-text">{filteredData.length}</p>
             </div>
-          </div>
-
-          {/* Pagination Controls */}
-          <div className="flex items-center gap-4 pt-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 text-xs font-semibold tracking-luxury uppercase bg-luxury-bg-subtle border border-luxury-border rounded hover:border-luxury-accent disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              ← Previous
-            </button>
-
-            <input
-              type="number"
-              value={currentPage}
-              onChange={(e) => setCurrentPage(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-16 px-2 py-2 text-xs text-center bg-luxury-bg-subtle border border-luxury-border rounded text-luxury-text"
-              min="1"
-            />
-
-            <button
-              onClick={() => setCurrentPage(currentPage + 1)}
-              className="px-3 py-2 text-xs font-semibold tracking-luxury uppercase bg-luxury-bg-subtle border border-luxury-border rounded hover:border-luxury-accent transition-all"
-            >
-              Next →
-            </button>
-
-            <span className="ml-auto text-xs text-luxury-text-secondary">
-              💡 Tip: Testable CVEs are from 2023 and earlier. Try page 50+ or filter by testable.
-            </span>
-          </div>
+          )}
         </div>
       </div>
 
