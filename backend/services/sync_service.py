@@ -1,13 +1,17 @@
 """Cyperf sync orchestration service with graceful degradation."""
 
 import asyncio
+import json
 import logging
+import os
 import time
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import Settings
-from db.cyperf_mapping import CyperfSupportedCVE
+from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
+from db.cyperf_mapping import CyperfSupportedCVE  # noqa: F401 — kept; admin.py reads this table
 from db.sync_metadata import SyncMetadata
 from services.cyperf_service import CyperfAPIError, CyperfConnectionError, CyperfService
 
@@ -25,16 +29,16 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
 
     Handles the full sync lifecycle:
     1. Record sync attempt start
-    2. Fetch profiles from Cyperf with retry logic
-    3. Extract CVEs and upsert to database
-    4. Record completion (success or failure)
-    5. Compute next scheduled sync time
+    2. Fetch CVE→Strike mappings from Cyperf with retry logic
+    3. Atomic full-replace: delete all existing cverf_cve_strike_mappings, insert fresh
+    4. Write JSON artifact to ./data/cve_strikes.json
+    5. Record completion (success or failure)
 
     On any Cyperf failure:
     - Retries immediately once, then after 5 second delay once more (3 total attempts)
     - Logs error details and retry count
     - Records failure in sync_metadata WITHOUT corrupting database
-    - Retains ALL previous sync data (graceful degradation)
+    - Retains ALL previous cverf_cve_strike_mappings rows (graceful degradation)
     - Does NOT re-raise exception (allows scheduler to continue)
 
     On database errors:
@@ -90,80 +94,72 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
                 password=settings.cyperf_password,
             )
 
-            # Fetch profiles and extract CVEs
-            result = await cyperf_service.sync_cyperf_cves()
+            # Fetch all CVE→Strike mappings (paginated, batched)
+            cve_mappings = await cyperf_service.fetch_cve_strike_mappings()
+            cves_count = len(cve_mappings)
 
-            if result.error:
-                # CVE extraction had errors but may have partial results
-                last_error = result.error
-                logger.warning(f"Sync had errors: {result.error}")
+            if cves_count == 0:
+                logger.warning(f"Sync returned 0 CVE mappings on attempt {attempt_number}")
+                last_error = "No CVE mappings returned from Cyperf"
+                if attempt_number == 3:
+                    break
+                continue
 
-                # Even with errors, if we got some data, record it
-                if result.cves_extracted == 0:
-                    # No data retrieved; this counts as failure
-                    logger.error(f"No CVEs extracted; attempt {attempt_number} failed")
-                    if attempt_number == 3:
-                        # All retries failed
-                        break
-                    continue
-
-            # Sync succeeded; upsert CVE mappings to database
+            # Atomic full-replace: delete all existing, insert fresh
             try:
-                # Get CVE mappings from service
-                # Note: cyperf_service.extract_cves_from_profiles returns Dict[cve_id, profile_name]
-                # We need to fetch profiles again to have the mapping data
-                profiles = await cyperf_service.fetch_attack_profiles()
-                cve_mappings = cyperf_service.extract_cves_from_profiles(profiles)
+                async with session.begin():
+                    await session.execute(delete(CvrfCveStrikeMappings))
+                    for cve_id, strike_name in cve_mappings.items():
+                        session.add(CvrfCveStrikeMappings(cve_id=cve_id, strike_name=strike_name))
 
-                # Upsert each CVE-profile mapping atomically
-                for cve_id, profile_name in cve_mappings.items():
-                    CyperfSupportedCVE.upsert_from_cyperf_data(
-                        session=session,
-                        cve_id=cve_id,
-                        profile_name=profile_name,
+                logger.info(f"Full-replace sync: inserted {cves_count} CVE-Strike mappings")
+
+                # Write JSON artifact (outside transaction — non-fatal if write fails)
+                try:
+                    output_path = (
+                        getattr(settings, "cve_strikes_output_path", None)
+                        or "./data/cve_strikes.json"
+                    )
+                    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+                    with open(output_path, "w") as f:
+                        json.dump(cve_mappings, f, indent=2)
+                    logger.info(f"Wrote CVE-Strike JSON artifact to {output_path}")
+                except Exception as json_err:
+                    logger.warning(
+                        f"Failed to write CVE-Strike JSON artifact: {json_err} (sync continues)"
                     )
 
-                # Commit all upserts in a single transaction
-                await session.commit()
-
-                logger.info(f"✓ Upserted {len(cve_mappings)} CVE-profile mappings to database")
-
                 # Record successful completion
+                # profiles_count not tracked separately; pass cves_count as proxy
                 await SyncMetadata.record_sync_complete(
                     session=session,
                     job_name="cyperf_profiles",
                     success=True,
-                    profiles_count=result.profiles_fetched,
-                    cves_count=result.cves_extracted,
+                    profiles_count=cves_count,
+                    cves_count=cves_count,
                     error_msg=None,
                     next_sync_hours=settings.cyperf_sync_interval_hours,
                 )
                 await session.commit()
 
-                duration = time.time() - start_time
-                logger.info(
-                    f"✓ Cyperf sync SUCCEEDED: {result.profiles_fetched} profiles, "
-                    f"{result.cves_extracted} CVEs, {duration:.2f}s, attempt {attempt_number}"
-                )
-
                 # Check for circuit breaker condition (consecutive failures)
                 consecutive_failures = await SyncMetadata.get_consecutive_failures(session)
                 if consecutive_failures > 0:
-                    # Previous syncs had failed; reset on success
                     logger.info(f"Circuit breaker: resetting after {consecutive_failures} failures")
 
+                duration = time.time() - start_time
+                logger.info(
+                    f"Cyperf sync SUCCEEDED: {cves_count} CVE mappings, "
+                    f"{duration:.2f}s, attempt {attempt_number}"
+                )
                 return  # Success; exit retry loop
 
             except Exception as db_error:
-                # Database operation failed
                 await session.rollback()
-                logger.error(f"Database error during upsert: {db_error}")
+                logger.error(f"Database error during full-replace: {db_error}")
                 last_error = f"Database write failed: {str(db_error)}"
-
                 if attempt_number == 3:
-                    # All retries failed; record failure and exit
                     break
-                # Otherwise retry with next attempt
 
         except (CyperfConnectionError, CyperfAPIError) as e:
             # Cyperf error; log and retry
@@ -207,7 +203,8 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
         consecutive_failures = await SyncMetadata.get_consecutive_failures(session)
         if consecutive_failures >= 3:
             logger.error(
-                "Circuit breaker: 3 consecutive sync failures. Check Cyperf controller availability."
+                "Circuit breaker: 3 consecutive sync failures. "
+                "Check Cyperf controller availability."
             )
 
     except Exception as e:
@@ -219,7 +216,6 @@ async def get_sync_status(session: AsyncSession) -> SyncMetadata | None:
 
     Args:
         session: AsyncSession for database queries
-        job_name: Name of sync job (default: 'cyperf_profiles')
 
     Returns:
         SyncMetadata record or None if never synced
