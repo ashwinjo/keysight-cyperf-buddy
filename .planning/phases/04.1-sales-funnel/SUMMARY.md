@@ -166,3 +166,79 @@ All checks passed against the running Docker stack (`cyperf_api_dev`):
 - The hook (`useContactForm`) is decoupled from the component. It can be tested in isolation without rendering JSX.
 - Confirmation dialog and sidebar sheet are separate Radix Dialog roots — they do not nest. This avoids focus trap conflicts.
 - The component uses `React.useEffect` with `isOpen` as the only dependency to avoid stale closure issues with form/hook refs.
+
+---
+
+---
+
+# Plan 03 Summary: Integrate Buttons + Sidebar into Search and Browse Pages
+
+**Executed:** 2026-02-23
+**Status:** Complete
+**Commits:** 3 atomic commits tagged (04.1-03)
+
+---
+
+## What Was Built
+
+### `frontend/src/pages/SearchPage.tsx` — CVE detail card with action buttons
+- Added `contactSidebarOpen: boolean` and `contactContext: ContactContext` state at component top level
+- Added `openSidebar(ctx: ContactContext)` helper: sets context then opens the sidebar
+- Injected an action row at the bottom of the `{cveResult && (...)}` detail card (after Cyperf Test Profiles section):
+  - `testable === true`: solid emerald "Let's Discuss" button (`bg-emerald-700 hover:bg-emerald-600`)
+  - `testable === false`: outlined "Request Feature" button (`border-luxury-accent/40 text-luxury-accent`)
+- Neither button renders until `cveResult` is populated (guard already provided by the existing `{cveResult && (...)}` block)
+- Rendered `<ContactFormSidebar>` as a sibling to the detail card block, also guarded by `{cveResult && (...)}` — receives `cveId`, `testable`, `context`, `cvssScore`, `attackProfiles` from live result
+- Imported `ContactContext` from `../../types/api` and `ContactFormSidebar` from `../components/contact/ContactFormSidebar`
+
+### `frontend/src/components/shared/DataTable.tsx` — Optional row action column
+- Extended `DataTableProps` with two optional fields:
+  - `onRowAction?: (cve: CVEResponse) => void` — callback invoked on button click with the full CVE object
+  - `rowActionLabel?: string` — button label; defaults to `"Let's Discuss"` when not provided
+- Added conditional `<th>` in `<thead>`: renders only when `onRowAction` is defined
+- Added conditional `<td>` in each `<tbody>` row: renders only when `onRowAction` is defined
+- All existing callers (`SearchPage`) that omit `onRowAction` are completely unaffected — no column rendered, no type errors
+
+### `frontend/src/pages/BrowsePage.tsx` — Per-row engagement action + sidebar
+- Added `contactSidebarOpen: boolean` and `selectedCVE: CVEResponse | null` state
+- Added `handleRowAction(cve: CVEResponse)` handler: sets `selectedCVE` and opens sidebar
+- Passed `onRowAction={handleRowAction}` and `rowActionLabel="Let's Discuss"` to `<DataTable>`
+- Rendered `<ContactFormSidebar>` conditionally on `selectedCVE !== null`:
+  - `onClose` resets both `contactSidebarOpen` (false) and `selectedCVE` (null) — prevents stale data if user opens a second CVE without a full remount
+  - `context="discuss"` (hardcoded: Browse only shows testable CVEs)
+- Imported `ContactFormSidebar` from `../components/contact/ContactFormSidebar`
+
+---
+
+## Verification Results
+
+| Check | Expected | Actual |
+|-------|----------|--------|
+| `npm run build` no TypeScript errors | 0 errors | PASS |
+| `tsc` clean (implicit via build) | 0 errors | PASS |
+| SearchPage testable CVE: "Let's Discuss" renders | Yes | Code confirmed |
+| SearchPage non-testable CVE: "Request Feature" renders | Yes | Code confirmed |
+| Neither button before search result loads | Yes | Guarded by `{cveResult && ...}` |
+| BrowsePage "Action" column renders with "Let's Discuss" | Yes | Code confirmed |
+| DataTable without onRowAction: no Action column | Yes | Conditional render |
+| Sidebar context="discuss" in Search + Browse | Yes | Both paths verified |
+| Sidebar context="feature_request" in Search (non-testable) | Yes | `openSidebar('feature_request')` |
+| selectedCVE reset on sidebar close in BrowsePage | Yes | onClose handler |
+| Build size acceptable | <300kB gzip | 130kB gzip (no change) |
+
+---
+
+## Notable Decisions
+
+1. **SearchPage sidebar guarded by `cveResult`** — The `<ContactFormSidebar>` is rendered inside `{cveResult && (...)}` rather than always mounted. This avoids passing empty/null prop values and prevents the Radix Dialog from being mounted in the DOM before it is needed.
+2. **BrowsePage `selectedCVE` reset in onClose** — Setting `selectedCVE = null` on close prevents stale CVE data from persisting between sidebar opens. If the user clicks a second row before the sidebar fully unmounts, the next `setSelectedCVE` call triggers a fresh render of the sidebar with correct props.
+3. **DataTable backward-compat** — All new props are optional with `?`. No default parameter values were used; instead, runtime `onRowAction &&` guards prevent any render of the new column. This avoids TypeScript requiring default values for callers.
+4. **`rowActionLabel` default in JSX** — The fallback `rowActionLabel ?? "Let's Discuss"` is applied inline in JSX rather than as a destructured default. Both approaches are equivalent; the inline approach is marginally more explicit at the usage site.
+
+---
+
+## Architecture Notes
+
+- The SearchPage button placement is at the bottom of the detail card, separated from content by a `border-t`. This follows the visual hierarchy: scan data first, act last.
+- BrowsePage uses `context="discuss"` unconditionally because Browse filters to `testable=true` only. There is no code path in BrowsePage that would produce a non-testable CVE in the table.
+- All three entry points pass the full `attackProfiles` array to the sidebar so the backend email always includes Cyperf strike context regardless of which page the user is on.

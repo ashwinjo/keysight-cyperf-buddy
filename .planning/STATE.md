@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-23
-**Session:** Phase 4.1 Plan 02 executed - Contact form sidebar component (React Hook Form + Zod)
+**Session:** Phase 4.1 Plan 03 executed - Integrated ContactFormSidebar into SearchPage and BrowsePage
 
 ---
 
@@ -18,8 +18,8 @@
 ## Current Position
 
 **Active Phase:** 4.1
-**Active Plan:** 04.1-02-PLAN (complete)
-**Status:** In progress — Plans 01-02 complete, Plans 03-05 pending
+**Active Plan:** 04.1-03-PLAN (complete)
+**Status:** In progress — Plans 01-03 complete, Plans 04-05 pending
 
 **Progress:**
 [██████████] 100%
@@ -28,7 +28,7 @@ Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/
 Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
 Phase 3.1 [Cyperf CVE Ingestion Refactor]          [x] Complete (8/8 tasks, 3/3 plans)
 Phase 4 [Frontend UI]                              [x] Complete (all backend APIs complete)
-Phase 4.1 [Sales Funnel]                           [~] In Progress (2/5 plans: 04.1-01 and 04.1-02 complete)
+Phase 4.1 [Sales Funnel]                           [~] In Progress (3/5 plans: 04.1-01, 04.1-02, and 04.1-03 complete)
 Phase 5 [Batch Processing + Export]                [ ] Not started (depends on Phase 2 + 3 + 4)
 
 Overall: 3/5 phases complete (60%)
@@ -137,6 +137,9 @@ Phase 1 (Setup) ✓
 - [Phase 04.1-sales-funnel Plan 02]: ContactFormSidebar owns its own state machine (idle/confirming/form/submitting/success); parent only toggles isOpen
 - [Phase 04.1-sales-funnel Plan 02]: ConfirmDialog and Sheet sidebar are separate Radix Dialog roots — prevents focus trap nesting conflicts
 - [Phase 04.1-sales-funnel Plan 02]: typed unknown catch (not any) in useContactForm — strict TypeScript without disabling rules
+- [Phase 04.1-sales-funnel Plan 03]: ContactFormSidebar guarded by `{cveResult && ...}` in SearchPage — avoids null prop drilling and prevents Radix Dialog from mounting before first search
+- [Phase 04.1-sales-funnel Plan 03]: BrowsePage resets selectedCVE to null on sidebar close — prevents stale CVE data across successive sidebar opens
+- [Phase 04.1-sales-funnel Plan 03]: DataTable onRowAction/rowActionLabel are optional with runtime `onRowAction &&` guards — zero impact on existing callers, no TypeScript required-default friction
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -176,7 +179,7 @@ None currently. Phases 1-3 complete and operational.
 
 ## Next Actions
 
-**Phase 4.1 IN PROGRESS.** Plans 04.1-01 and 04.1-02 complete. Ready to execute Plan 04.1-03 next (page integration: wire ContactFormSidebar into CVE detail views).
+**Phase 4.1 IN PROGRESS.** Plans 04.1-01, 04.1-02, and 04.1-03 complete. Ready to execute Plan 04.1-04 next.
 
 ### Option A: Execute Phase 4 (Frontend UI)
 - Build React SPA with Vite + Tailwind + shadcn/ui
