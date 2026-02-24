@@ -44,7 +44,7 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
               Published {getSortIcon('published_date')}
             </th>
             <th className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase">
-              Testable
+              Can Cyperf Test this ?
             </th>
             <th className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase">
               Cyperf Profiles
