@@ -4,10 +4,10 @@ The Vite dev proxy rewrites /api/* -> http://localhost:8000/* so this router,
 registered at prefix /ai-cves, is reachable at /api/ai-cves from the frontend.
 
 Supported query parameters:
-  page        int  >= 1          Page number, 1-indexed (default: 1)
-  limit       int  1..1000       Records per page (default: 100)
-  strike_type str  optional      Filter by AICve.strike_type exact match
-                                 (e.g. 'ai_attack', 'fuzzing', 'protocol_abuse')
+  page        int  >= 1           Page number, 1-indexed (default: 1)
+  limit       int  1..10000       Records per page (default: 100, max: 10000)
+  strike_type str  optional       Filter by AICve.strike_type exact match
+                                  (e.g. 'ai_attack', 'fuzzing', 'protocol_abuse')
 """
 
 import logging
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/ai-cves", tags=["ai-cves"])
 @router.get("", response_model=AiCVEListResponse)
 async def list_ai_cves(
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
-    limit: int = Query(100, ge=1, le=1000, description="Records per page (max 1000)"),
+    limit: int = Query(100, ge=1, le=10000, description="Records per page (max 10000)"),
     strike_type: str | None = Query(
         None,
         description="Filter by strike category (e.g. ai_attack, fuzzing, protocol_abuse)",
