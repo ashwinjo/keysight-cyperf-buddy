@@ -30,8 +30,9 @@ class CVEResponse(BaseModel):
     references: str | None = Field(None, description="JSON array of reference URLs")
 
     testable: bool = Field(False, description="Whether CVE can be tested with Cyperf")
-    attack_profile: str | None = Field(
-        None, description="Cyperf Attack Profile name that covers this CVE"
+    attack_profiles: list[str] = Field(
+        default_factory=list,
+        description="All Cyperf Strike names that cover this CVE (empty list if not testable)",
     )
 
     class Config:

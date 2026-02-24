@@ -54,9 +54,11 @@ class CVEDetail(BaseModel):
         description="Reference URLs from NVD",
     )
 
-    # Testability placeholder — populated by Phase 3 Cyperf integration
-    testable: bool | None = Field(
-        None, description="Whether Cyperf can test this CVE (None = not yet determined)"
+    # Testability — populated from cverf_cve_strike_mappings via LEFT JOIN
+    testable: bool = Field(False, description="True if at least one Cyperf Strike covers this CVE")
+    attack_profiles: list[str] = Field(
+        default_factory=list,
+        description="All Cyperf Strike names that cover this CVE (empty list if not testable)",
     )
 
 

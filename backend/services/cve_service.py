@@ -10,6 +10,7 @@ Architecture:
 - Fuzzy search dispatch: exact -> SQL LIKE prefix -> RapidFuzz (local DB only)
 - DB persistence: every NVD fetch is written to cves table via upsert
 - Severity post-filter: OR semantics (v3.1 OR v4.0 match)
+- Testability: LEFT JOIN with cverf_cve_strike_mappings; returns attack_profiles list
 """
 
 import json
@@ -19,11 +20,11 @@ from datetime import datetime
 
 from fastapi import BackgroundTasks
 from rapidfuzz import fuzz, process
-from sqlalchemy import func, not_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.cve import CVE
-from db.cyperf_mapping import CyperfSupportedCVE
+from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
 from services.cache_service import CVECacheService
 from services.nvd_service import (
     NVDClient,
@@ -135,7 +136,8 @@ async def get_latest_cves(
     Strategy:
     1. Attempt NVD fetch for the last 30 days; cache each CVE individually.
     2. Query local DB with pagination (sorted by published_date DESC).
-    3. Apply severity post-filter in Python (covers both v3.1 and v4.0).
+    3. Batch-load Strike names from cverf_cve_strike_mappings for each page.
+    4. Apply severity post-filter in Python (covers both v3.1 and v4.0).
 
     Returns (page_results, total_on_page).
     On NVD failure, serves from DB-only (graceful degradation).
@@ -154,26 +156,25 @@ async def get_latest_cves(
     except Exception as exc:
         logger.error("NVD fetch failed for /cve/latest: %s", exc, exc_info=True)
 
-    # Step 2: Query DB with pagination (join with Cyperf for testable status)
+    # Step 2: Query DB with pagination (sorted by published_date DESC)
     offset = (page - 1) * page_size
-    stmt = (
-        select(
-            CVE,
-            func.coalesce(CyperfSupportedCVE.attack_profile_name).label("cyperf_profile"),
-        )
-        .outerjoin(
-            CyperfSupportedCVE,
-            (CVE.id == CyperfSupportedCVE.cve_id) & not_(CyperfSupportedCVE.is_deprecated),
-        )
-        .order_by(CVE.published_date.desc())
-        .offset(offset)
-        .limit(page_size)
-    )
+    stmt = select(CVE).order_by(CVE.published_date.desc()).offset(offset).limit(page_size)
     result = await db.execute(stmt)
-    rows = result.all()
+    cves = result.scalars().all()
 
-    # Step 3: Convert ORM objects to dicts with Cyperf data
-    cve_list = [_orm_to_dict(row[0], cyperf_profile=row[1]) for row in rows]
+    # Step 3: Batch-load Strike names for all CVEs on this page
+    cve_ids = [cve.id for cve in cves]
+    strike_map: dict[str, list[str]] = {}
+    if cve_ids:
+        strike_stmt = select(
+            CvrfCveStrikeMappings.cve_id,
+            CvrfCveStrikeMappings.strike_name,
+        ).where(CvrfCveStrikeMappings.cve_id.in_(cve_ids))
+        strike_result = await db.execute(strike_stmt)
+        for row in strike_result.all():
+            strike_map.setdefault(row.cve_id, []).append(row.strike_name)
+
+    cve_list = [_orm_to_dict(cve, attack_profiles=strike_map.get(cve.id, [])) for cve in cves]
 
     # Step 4: Apply severity filter (OR: v3.1 OR v4.0 match)
     if severity:
@@ -244,26 +245,28 @@ async def _search_by_prefix(
 
     Translates * wildcards to SQL % wildcards.
     Only searches locally-cached CVEs, not NVD live.
-    Joins with cyperf_supported_cves to populate testable status.
+    Batch-loads Strike names from cverf_cve_strike_mappings.
     """
     sql_pattern = query.replace("*", "%")
-    # LEFT JOIN CVE with CyperfSupportedCVE to get testable status
     stmt = (
-        select(
-            CVE,
-            func.coalesce(CyperfSupportedCVE.attack_profile_name).label("cyperf_profile"),
-        )
-        .outerjoin(
-            CyperfSupportedCVE,
-            (CVE.id == CyperfSupportedCVE.cve_id) & not_(CyperfSupportedCVE.is_deprecated),
-        )
-        .where(CVE.id.like(sql_pattern))
-        .order_by(CVE.published_date.desc())
-        .limit(limit)
+        select(CVE).where(CVE.id.like(sql_pattern)).order_by(CVE.published_date.desc()).limit(limit)
     )
     result = await db.execute(stmt)
-    rows = result.all()
-    return [_orm_to_dict(row[0], cyperf_profile=row[1]) for row in rows]
+    cves = result.scalars().all()
+
+    # Batch-load Strike names for all returned CVEs
+    cve_ids = [cve.id for cve in cves]
+    strike_map: dict[str, list[str]] = {}
+    if cve_ids:
+        strike_stmt = select(
+            CvrfCveStrikeMappings.cve_id,
+            CvrfCveStrikeMappings.strike_name,
+        ).where(CvrfCveStrikeMappings.cve_id.in_(cve_ids))
+        strike_result = await db.execute(strike_stmt)
+        for row in strike_result.all():
+            strike_map.setdefault(row.cve_id, []).append(row.strike_name)
+
+    return [_orm_to_dict(cve, attack_profiles=strike_map.get(cve.id, [])) for cve in cves]
 
 
 async def _fuzzy_search_ids(
@@ -355,31 +358,32 @@ async def _upsert_cve(cve_data: dict, db: AsyncSession) -> None:
 
 
 async def _get_from_db(cve_id: str, db: AsyncSession) -> dict | None:
-    """Last-resort fallback: query DB for CVE with Cyperf testability data.
+    """Last-resort fallback: query DB for CVE with aggregated Cyperf Strike names.
 
-    Returns dict or None if not in DB. Joins with cyperf_supported_cves to get testable status.
+    Returns dict or None if not in DB.
+    Queries cverf_cve_strike_mappings to get all Strike names for this CVE.
     """
     db_cve = await db.get(CVE, cve_id)
     if not db_cve:
         return None
 
-    # Fetch Cyperf mapping (if CVE is testable)
-    cyperf_stmt = select(CyperfSupportedCVE.attack_profile_name).where(
-        CyperfSupportedCVE.cve_id == cve_id,
-        not_(CyperfSupportedCVE.is_deprecated),
+    # Fetch all Strike names for this CVE from cverf_cve_strike_mappings
+    strike_stmt = select(CvrfCveStrikeMappings.strike_name).where(
+        CvrfCveStrikeMappings.cve_id == cve_id
     )
-    cyperf_result = await db.execute(cyperf_stmt)
-    cyperf_profile = cyperf_result.scalar_one_or_none()
+    strike_result = await db.execute(strike_stmt)
+    strike_names = strike_result.scalars().all()
 
-    return _orm_to_dict(db_cve, cyperf_profile=cyperf_profile)
+    return _orm_to_dict(db_cve, attack_profiles=list(strike_names))
 
 
-def _orm_to_dict(cve: CVE, cyperf_profile: str | None = None) -> dict:
+def _orm_to_dict(cve: CVE, attack_profiles: list[str] | None = None) -> dict:
     """Convert CVE ORM object to application dict schema.
 
     Args:
         cve: CVE ORM object
-        cyperf_profile: Attack profile name from cyperf_supported_cves table (if testable)
+        attack_profiles: List of Cyperf Strike names from cverf_cve_strike_mappings
+                         (empty list if CVE is not testable by any Strike)
     """
     reference_urls: list[str] = []
     if cve.references:
@@ -395,6 +399,7 @@ def _orm_to_dict(cve: CVE, cyperf_profile: str | None = None) -> dict:
         except AttributeError:
             published_str = str(cve.published_date)
 
+    profiles = attack_profiles or []
     return {
         "id": cve.id,
         "description": cve.description or "No description available",
@@ -406,6 +411,6 @@ def _orm_to_dict(cve: CVE, cyperf_profile: str | None = None) -> dict:
         "cvss_v4_severity": cve.cvss_v4_severity,
         "cvss_v4_vector": cve.cvss_v4_vector,
         "reference_urls": reference_urls,
-        "testable": cyperf_profile is not None,  # true if profile exists, false otherwise
-        "attack_profile": cyperf_profile,  # Profile name from Cyperf sync, null if not testable
+        "testable": len(profiles) > 0,  # true if any Strike covers this CVE
+        "attack_profiles": profiles,  # list of all Strike names (empty if not testable)
     }
