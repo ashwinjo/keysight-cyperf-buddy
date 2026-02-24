@@ -22,7 +22,7 @@
 **Status:** Phase 2 complete
 
 **Progress:**
-[█████████░] 89%
+[██████████] 100%
 Phase 1 [Project Setup + Infrastructure]     [x] Complete (7/7 tasks)
 Phase 2 [Backend API + NVD Integration]      [x] Complete (10/10 tasks, 1/1 plans)
 Phase 3 [Cyperf Integration + Sync Engine]   [x] Complete (11/11 tasks, 2/2 plans)
@@ -52,6 +52,7 @@ Overall: 3/5 phases complete (60%)
 | Phase 04-frontend-ui P01 | 6 | 9 tasks | 14 files |
 | Phase 04-frontend-ui P04-02 | 7 | 5 tasks | 4 files |
 | Phase 03.1-cyperf-cve-ingestion-refactor P01 | 2 | 2 tasks | 2 files |
+| Phase 03.1-cyperf-cve-ingestion-refactor P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,8 @@ Phase 1 (Setup) ✓
 4. **Dark theme baseline in frontend** — Shodan aesthetic (#0D1117) ready for Phase 4 UI refinement
 5. **All services use Docker bridge network** — service-to-service communication via container names (postgres, redis, api)
 - [Phase 03.1-cyperf-cve-ingestion-refactor]: Composite PK (cve_id, strike_name) for cverf_cve_strike_mappings — no FK to cves.id; Cyperf data ingested independently of NVD
+- [Phase 03.1-cyperf-cve-ingestion-refactor]: cyperf package added to requirements.txt (named 'cyperf' on PyPI, v7.0.6, not 'cyperf-api-wrapper')
+- [Phase 03.1-cyperf-cve-ingestion-refactor]: sync_cyperf_cves() preserved as backward-compatible wrapper; primary data path is fetch_cve_strike_mappings() called directly from sync_service.py
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
