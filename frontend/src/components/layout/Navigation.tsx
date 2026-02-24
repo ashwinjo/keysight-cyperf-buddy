@@ -17,7 +17,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'NVD_Search' },
   { path: '/browse', label: 'All Cyperf CVE Strikes' },
-  { path: '/ai-cves', label: 'Non CVE Strikes' },
+  { path: '/ai-cves', label: 'All Cyperf Non CVE Strikes' },
   { path: '/what-is-cyperf', label: 'What is Cyperf' },
 ];
 
