@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     )
     cve_strikes_output_path: str | None = None  # Override path for JSON artifact
 
+    # Email service settings (Phase 4.1 - Sales Funnel)
+    smtp_server: str = "mail.keysight.com"
+    smtp_port: int = 587
+    smtp_username: str = ""  # Required for sending — set in .env
+    smtp_password: str = ""  # Required for sending — set in .env
+    smtp_from_email: str = "cyperf-tracker@keysight.com"
+    smtp_recipient_email: str = "ashwin.joshi@keysight.com"
+
     class Config:
         """Pydantic settings configuration."""
 
@@ -62,6 +70,13 @@ class Settings(BaseSettings):
             raise ValueError("CYPERF_USERNAME environment variable is required but not set")
         if not self.cyperf_password:
             raise ValueError("CYPERF_PASSWORD environment variable is required but not set")
+
+        # Warn if SMTP credentials are absent (non-fatal — app continues)
+        if not self.smtp_username or not self.smtp_password:
+            logger.warning(
+                "SMTP_USERNAME or SMTP_PASSWORD not set. "
+                "Contact form submissions will fail silently until credentials are configured."
+            )
 
         # Log successful configuration
         logger.info(f"✓ Configuration loaded ({self.environment} mode)")
