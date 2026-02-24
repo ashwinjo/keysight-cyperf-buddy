@@ -12,15 +12,24 @@ const config: Config = {
           900: "#0D1117",
           950: "#010409",
         },
-        // Refined luxury palette
+        // Keysight brand palette
+        keysight: {
+          red: "#EF3B39",           // Keysight Red (primary accent)
+          gray: "#4A4A4A",          // Keysight Gray (dark)
+          "gray-medium": "#9C9C9C", // Keysight Medium Gray
+          "gray-light": "#D3D3D3",  // Keysight Light Gray
+          black: "#000000",         // Black
+          white: "#FFFFFF",         // White
+        },
+        // Alias for backward compatibility
         luxury: {
-          bg: "#0A0E14",        // Deep charcoal
-          "bg-subtle": "#1a1f2e", // Subtle contrast
-          border: "#2d3748",    // Refined border
-          text: "#f5f1e8",      // Warm cream
-          "text-secondary": "#b8b5b0", // Warm gray
-          accent: "#d4af37",    // Gold
-          "accent-alt": "#c0a080", // Bronze
+          bg: "#FFFFFF",            // White background (clean, crisp)
+          "bg-subtle": "#F5F5F5",   // Very light gray
+          border: "#D3D3D3",        // Light gray border
+          text: "#000000",          // Black text
+          "text-secondary": "#9C9C9C", // Medium gray text
+          accent: "#EF3B39",        // Keysight Red (primary)
+          "accent-alt": "#4A4A4A",  // Keysight Gray (secondary)
         },
       },
       fontFamily: {

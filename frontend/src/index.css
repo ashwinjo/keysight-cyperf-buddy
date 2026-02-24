@@ -6,42 +6,43 @@
 
 @layer base {
   body {
-    background-color: #0A0E14;
-    color: #f5f1e8;
+    background-color: #FFFFFF;
+    color: #000000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: Georgia, Garamond, serif;
     letter-spacing: 0.05em;
+    color: #000000;
   }
 }
 
 @layer components {
   .btn-luxury-primary {
-    @apply px-6 py-3 bg-luxury-accent text-luxury-bg font-medium tracking-luxury uppercase text-xs
-           transition-all duration-200 hover:bg-luxury-accent-alt active:scale-95 shadow-elegant;
+    @apply px-6 py-3 bg-keysight-red text-white font-medium tracking-luxury uppercase text-xs
+           transition-all duration-200 hover:bg-red-700 active:scale-95 shadow-elegant;
   }
 
   .btn-luxury-secondary {
-    @apply px-6 py-3 bg-luxury-bg-subtle border border-luxury-border text-luxury-text font-medium
-           tracking-luxury uppercase text-xs transition-all duration-200 hover:border-luxury-accent
-           hover:text-luxury-accent shadow-elegant;
+    @apply px-6 py-3 bg-white border border-keysight-gray text-keysight-gray font-medium
+           tracking-luxury uppercase text-xs transition-all duration-200 hover:border-keysight-red
+           hover:text-keysight-red shadow-elegant;
   }
 
   .input-luxury {
-    @apply bg-luxury-bg-subtle border border-luxury-border text-luxury-text placeholder:text-luxury-text-secondary
-           px-4 py-3 tracking-tight transition-all duration-200 focus:border-luxury-accent focus:ring-1
-           focus:ring-luxury-accent focus:outline-none;
+    @apply bg-white border border-keysight-gray text-black placeholder:text-keysight-gray-medium
+           px-4 py-3 tracking-tight transition-all duration-200 focus:border-keysight-red focus:ring-1
+           focus:ring-keysight-red focus:outline-none;
   }
 
   .card-luxury {
-    @apply bg-luxury-bg-subtle border border-luxury-border rounded-lg p-6 shadow-elegant
-           transition-all duration-300 hover:shadow-elegant-lg hover:border-luxury-accent;
+    @apply bg-white border border-keysight-gray-light rounded-lg p-6 shadow-elegant
+           transition-all duration-300 hover:shadow-elegant-lg hover:border-keysight-red;
   }
 
   .divider-luxury {
-    @apply border-t border-luxury-border;
+    @apply border-t border-keysight-gray-light;
   }
 }
 

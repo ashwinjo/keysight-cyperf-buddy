@@ -54,8 +54,8 @@ export default function Navigation() {
             {/* Brand name — elegant serif display */}
             <a
               href="/"
-              className="font-display text-3xl font-bold text-luxury-accent tracking-luxury whitespace-nowrap
-                         transition-all duration-300 hover:text-luxury-accent-alt"
+              className="font-display text-3xl font-bold text-keysight-red tracking-luxury whitespace-nowrap
+                         transition-all duration-300 hover:text-red-600"
             >
               CVE²Strike
             </a>
@@ -88,12 +88,12 @@ export default function Navigation() {
             className={`px-5 py-2 rounded-md text-xs font-semibold tracking-luxury uppercase transition-all duration-200
               ${
                 syncStatus === 'success'
-                  ? 'bg-green-900/30 text-green-300 border border-green-700/50'
+                  ? 'bg-green-50 text-green-700 border border-green-300'
                   : syncStatus === 'error'
-                    ? 'bg-red-900/30 text-red-300 border border-red-700/50'
-                    : 'bg-luxury-accent/10 text-luxury-accent border border-luxury-accent/30 hover:bg-luxury-accent/20'
+                    ? 'bg-red-50 text-keysight-red border border-red-300'
+                    : 'bg-red-50 text-keysight-red border border-red-200 hover:bg-red-100'
               }
-              ${isSyncing ? 'opacity-75 cursor-wait' : 'hover:border-luxury-accent cursor-pointer'}`}
+              ${isSyncing ? 'opacity-75 cursor-wait' : 'hover:border-keysight-red cursor-pointer'}`}
             title="Trigger manual Cyperf sync to refresh CVE strike data"
           >
             {isSyncing ? (
