@@ -1,5 +1,35 @@
 # Cyperf Integration - Quick Start Guide
 
+## Fastest Start (recommended)
+
+Run everything — backend containers and the frontend dev server — with a single command from the **repo root**:
+
+```bash
+./start.sh
+```
+
+This script:
+1. Verifies the Docker daemon is running.
+2. Builds and starts `postgres`, `redis`, and `api` containers via `docker compose up -d --build --wait`.
+3. Polls `http://localhost:8000/health` until the API is healthy (up to 20 seconds).
+4. Runs `npm install && npm run dev` inside `./frontend/` in the background.
+
+Access points after startup:
+
+| Service  | URL                         |
+|----------|-----------------------------|
+| API      | http://localhost:8000       |
+| API docs | http://localhost:8000/docs  |
+| Frontend | http://localhost:5173       |
+
+To stop all services:
+
+```bash
+./stop.sh
+```
+
+---
+
 For rapid deployment and testing of Phase 3 Cyperf sync integration.
 
 ---
