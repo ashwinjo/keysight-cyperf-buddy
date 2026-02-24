@@ -17,12 +17,14 @@ from sqlalchemy import select
 
 from config import Settings
 from database import AsyncSessionLocal, engine
+from db.ai_cves import AICve
 from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
 from db.sync_metadata import SyncMetadata
 from services.cyperf_service import (
     CyperfAPIError,
     CyperfConnectionError,
     CyperfService,
+    StrikeFetchResult,
 )
 from services.sync_service import perform_sync
 
@@ -49,6 +51,7 @@ async def _clean_cverf_rows() -> None:
     await engine.dispose()
     conn = await asyncpg.connect(_DB_URL)
     try:
+        await conn.execute("DELETE FROM ai_cves")
         await conn.execute("DELETE FROM cverf_cve_strike_mappings")
         await conn.execute("DELETE FROM sync_metadata")
     finally:
@@ -109,6 +112,18 @@ def mock_strikes() -> list[dict[str, Any]]:
             "Name": "Malformed-Strike",
             # Missing Metadata entirely -- service must log warning and skip
         },
+        {
+            "Name": "Strike AI LLM SQL Injection Jailbreak Attack using OpenAI Chat Delimiters - Grok",
+            "Metadata": {
+                "References": [
+                    {"Type": "url", "Value": "https://arxiv.org/abs/2307.15043"},
+                ],
+            },
+        },
+        {
+            "Name": "Strike AI Protocol Fuzzer - EmptyRefs",
+            "Metadata": {"References": []},
+        },
     ]
 
 
@@ -156,15 +171,18 @@ class TestCyperfServiceFetchMappings:
             )
             result = await service.fetch_cve_strike_mappings()
 
+        assert isinstance(result, StrikeFetchResult)
+        cve_mappings = result.cve_mappings
+
         # Verify CVE ID prefixing
-        assert "CVE-2021-44228" in result
-        assert "CVE-2021-44229" in result
-        assert "CVE-2021-26855" in result
-        assert "CVE-2021-26857" in result
+        assert "CVE-2021-44228" in cve_mappings
+        assert "CVE-2021-44229" in cve_mappings
+        assert "CVE-2021-26855" in cve_mappings
+        assert "CVE-2021-26857" in cve_mappings
 
         # Verify Strike names are values
-        assert result["CVE-2021-44228"] == "Apache-Log4j-RCE"
-        assert result["CVE-2021-26855"] == "Microsoft-Exchange-ProxyLogon"
+        assert cve_mappings["CVE-2021-44228"] == "Apache-Log4j-RCE"
+        assert cve_mappings["CVE-2021-26855"] == "Microsoft-Exchange-ProxyLogon"
 
     @pytest.mark.asyncio
     async def test_fetch_mappings_skips_non_cve_references(self, test_settings, mock_strikes):
@@ -190,8 +208,9 @@ class TestCyperfServiceFetchMappings:
             )
             result = await service.fetch_cve_strike_mappings()
 
-        # No-CVE-Strike has only Type=OTHER references -- must not appear in result values
-        assert "No-CVE-Strike" not in result.values()
+        assert isinstance(result, StrikeFetchResult)
+        # No-CVE-Strike has only Type=OTHER references -- must not appear in cve_mappings values
+        assert "No-CVE-Strike" not in result.cve_mappings.values()
 
     @pytest.mark.asyncio
     async def test_fetch_mappings_skips_malformed_strikes(self, test_settings, mock_strikes):
@@ -218,10 +237,11 @@ class TestCyperfServiceFetchMappings:
             # Should not raise even with malformed Malformed-Strike in the batch
             result = await service.fetch_cve_strike_mappings()
 
-        # Malformed-Strike has no Metadata; must not appear in result values
-        assert "Malformed-Strike" not in result.values()
+        assert isinstance(result, StrikeFetchResult)
+        # Malformed-Strike has no Metadata; must not appear in cve_mappings values
+        assert "Malformed-Strike" not in result.cve_mappings.values()
         # Valid CVEs from other strikes must still be present
-        assert "CVE-2021-44228" in result
+        assert "CVE-2021-44228" in result.cve_mappings
 
     @pytest.mark.asyncio
     async def test_fetch_mappings_paginates_correctly(self, test_settings):
@@ -255,8 +275,9 @@ class TestCyperfServiceFetchMappings:
             )
             result = await service.fetch_cve_strike_mappings()
 
-        assert "CVE-2024-0001" in result
-        assert result["CVE-2024-0001"] == "Strike-A"
+        assert isinstance(result, StrikeFetchResult)
+        assert "CVE-2024-0001" in result.cve_mappings
+        assert result.cve_mappings["CVE-2024-0001"] == "Strike-A"
         # Should have called get_resources_strikes exactly twice (page1 + empty terminator)
         assert mock_api_instance.get_resources_strikes.call_count == 2
 
@@ -303,6 +324,222 @@ class TestCyperfServiceFetchMappings:
                 await service.fetch_cve_strike_mappings()
 
             assert "Authentication failed" in str(exc_info.value)
+
+
+# ============================================================================
+# Unit Tests: AI Strike Detection
+# ============================================================================
+
+
+class TestAIStrikeDetection:
+    """Test AI strike detection and synthetic ID generation in fetch_cve_strike_mappings()."""
+
+    def _make_page_response(self, strikes: list[dict]) -> MagicMock:
+        mock_response = MagicMock()
+        mock_response.to_json.return_value = json.dumps({"data": strikes})
+        return mock_response
+
+    def _make_empty_response(self) -> MagicMock:
+        mock_response = MagicMock()
+        mock_response.to_json.return_value = json.dumps({"data": []})
+        return mock_response
+
+    @pytest.mark.asyncio
+    async def test_ai_strikes_captured_in_ai_strikes_list(self, test_settings, mock_strikes):
+        """AI-type strikes (url-only refs) appear in ai_strikes, not cve_mappings."""
+        page1_response = self._make_page_response(mock_strikes)
+        empty_response = self._make_empty_response()
+
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = [
+                page1_response,
+                empty_response,
+            ]
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+            result = await service.fetch_cve_strike_mappings()
+
+        ai_strike_names = [r.strike_name for r in result.ai_strikes]
+
+        # AI strikes (url-only and empty-refs) must appear in ai_strikes list
+        assert (
+            "Strike AI LLM SQL Injection Jailbreak Attack using OpenAI Chat Delimiters - Grok"
+            in ai_strike_names
+        )
+        assert "Strike AI Protocol Fuzzer - EmptyRefs" in ai_strike_names
+
+        # AI strike names must NOT appear as values in cve_mappings
+        assert (
+            "Strike AI LLM SQL Injection Jailbreak Attack using OpenAI Chat Delimiters - Grok"
+            not in result.cve_mappings.values()
+        )
+        assert "Strike AI Protocol Fuzzer - EmptyRefs" not in result.cve_mappings.values()
+
+        # Exactly 2 AI strikes: url-only + empty-refs
+        # (No-CVE-Strike has Type=OTHER which also has no CVE; Malformed-Strike has no Metadata)
+        assert len(result.ai_strikes) == 4  # No-CVE-Strike + Malformed-Strike + 2 AI strikes
+
+    @pytest.mark.asyncio
+    async def test_ai_strike_cve_id_starts_with_nocve_prefix(self, test_settings, mock_strikes):
+        """Synthetic cve_id for AI strikes always starts with 'NoCVE_cyperf'."""
+        page1_response = self._make_page_response(mock_strikes)
+        empty_response = self._make_empty_response()
+
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = [
+                page1_response,
+                empty_response,
+            ]
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+            result = await service.fetch_cve_strike_mappings()
+
+        for record in result.ai_strikes:
+            assert record.cve_id.startswith(
+                "NoCVE_cyperf"
+            ), f"Expected NoCVE_cyperf prefix, got: {record.cve_id}"
+
+    @pytest.mark.asyncio
+    async def test_ai_strike_cve_id_is_deterministic(self, test_settings):
+        """Calling fetch_cve_strike_mappings twice produces the same cve_id for the same strike.
+
+        This validates the uuid5 idempotency property: same input -> same output.
+        """
+        ai_only_strikes = [
+            {
+                "Name": "Strike AI LLM SQL Injection Jailbreak Attack using OpenAI Chat Delimiters - Grok",
+                "Metadata": {
+                    "References": [{"Type": "url", "Value": "https://arxiv.org/abs/2307.15043"}]
+                },
+            }
+        ]
+        page1 = MagicMock()
+        page1.to_json.return_value = json.dumps({"data": ai_only_strikes})
+        empty = MagicMock()
+        empty.to_json.return_value = json.dumps({"data": []})
+
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            # Two calls: first fetch and second fetch
+            mock_api_instance.get_resources_strikes.side_effect = [
+                page1,
+                empty,
+                page1,
+                empty,
+            ]
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+            result1 = await service.fetch_cve_strike_mappings()
+            result2 = await service.fetch_cve_strike_mappings()
+
+        assert len(result1.ai_strikes) == 1
+        assert len(result2.ai_strikes) == 1
+
+        # cve_id must be identical across both calls (uuid5 determinism)
+        assert result1.ai_strikes[0].cve_id == result2.ai_strikes[0].cve_id
+
+        # row_id (uuid4) must differ — new PK per sync cycle
+        assert result1.ai_strikes[0].row_id != result2.ai_strikes[0].row_id
+
+    @pytest.mark.asyncio
+    async def test_ai_strike_url_only_metadata_json_contains_url(self, test_settings):
+        """URL-only strike produces metadata_json containing the url reference."""
+        url_strike = [
+            {
+                "Name": "Strike AI LLM SQL Injection Jailbreak Attack using OpenAI Chat Delimiters - Grok",
+                "Metadata": {
+                    "References": [{"Type": "url", "Value": "https://arxiv.org/abs/2307.15043"}]
+                },
+            }
+        ]
+        page1 = MagicMock()
+        page1.to_json.return_value = json.dumps({"data": url_strike})
+        empty = MagicMock()
+        empty.to_json.return_value = json.dumps({"data": []})
+
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = [page1, empty]
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+            result = await service.fetch_cve_strike_mappings()
+
+        assert len(result.ai_strikes) == 1
+        record = result.ai_strikes[0]
+        assert record.metadata_json is not None
+        parsed = json.loads(record.metadata_json)
+        assert isinstance(parsed, list)
+        assert any(
+            r.get("Type") == "url" for r in parsed
+        ), "metadata_json must contain the url reference"
+
+    @pytest.mark.asyncio
+    async def test_ai_strike_empty_refs_metadata_json_is_none(self, test_settings):
+        """Strike with empty References list produces metadata_json=None."""
+        empty_refs_strike = [
+            {
+                "Name": "Strike AI Protocol Fuzzer - EmptyRefs",
+                "Metadata": {"References": []},
+            }
+        ]
+        page1 = MagicMock()
+        page1.to_json.return_value = json.dumps({"data": empty_refs_strike})
+        empty = MagicMock()
+        empty.to_json.return_value = json.dumps({"data": []})
+
+        with patch("services.cyperf_service.cyperf") as mock_cyperf:
+            mock_api_client = MagicMock()
+            mock_api_instance = MagicMock()
+            mock_cyperf.ApiClient.return_value.__enter__ = MagicMock(return_value=mock_api_client)
+            mock_cyperf.ApiClient.return_value.__exit__ = MagicMock(return_value=False)
+            mock_cyperf.ApplicationResourcesApi.return_value = mock_api_instance
+            mock_api_instance.get_resources_strikes.side_effect = [page1, empty]
+
+            service = CyperfService(
+                controller_ip=test_settings.cyperf_controller_ip,
+                username=test_settings.cyperf_username,
+                password=test_settings.cyperf_password,
+            )
+            result = await service.fetch_cve_strike_mappings()
+
+        assert len(result.ai_strikes) == 1
+        assert (
+            result.ai_strikes[0].metadata_json is None
+        ), "Empty refs list must produce metadata_json=None"
 
 
 # ============================================================================
@@ -418,6 +655,41 @@ class TestPerformSyncRefactored:
             metadata = await SyncMetadata.get_last_sync_status(session, job_name="cyperf_profiles")
             assert metadata is not None
             assert metadata.status == "success"
+
+        await _clean_cverf_rows()
+
+    @pytest.mark.asyncio
+    async def test_perform_sync_writes_ai_cves_rows(self, test_settings):
+        """Successful sync with AI-type strikes writes rows to ai_cves table."""
+        await _clean_cverf_rows()
+
+        ai_strike_name = (
+            "Strike AI LLM SQL Injection Jailbreak Attack using OpenAI Chat Delimiters - Grok"
+        )
+        strikes_with_ai = [
+            {
+                "Name": "CVE-Strike",
+                "Metadata": {"References": [{"Type": "CVE", "Value": "2024-9001"}]},
+            },
+            {
+                "Name": ai_strike_name,
+                "Metadata": {
+                    "References": [{"Type": "url", "Value": "https://arxiv.org/abs/2307.15043"}]
+                },
+            },
+        ]
+
+        async with AsyncSessionLocal() as session:
+            with self._patch_cyperf([self._page(strikes_with_ai), self._empty_page()]):
+                await perform_sync(session, test_settings)
+
+            result = await session.execute(select(AICve))
+            ai_rows = result.scalars().all()
+
+        assert len(ai_rows) == 1, f"Expected 1 AI strike row, got {len(ai_rows)}"
+        assert ai_rows[0].strike_name == ai_strike_name
+        assert ai_rows[0].cve_id.startswith("NoCVE_cyperf")
+        assert ai_rows[0].strike_type == "ai_attack"
 
         await _clean_cverf_rows()
 
