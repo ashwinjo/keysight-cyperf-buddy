@@ -60,14 +60,21 @@ export default function SearchPage() {
             )}
             <p><strong>References:</strong></p>
             <ul className="ml-4 list-disc">
-              {cveResult.references.map((ref, i) => (
+              {cveResult.references.map((ref: string, i: number) => (
                 <li key={i} className="text-blue-400 hover:underline">
                   <a href={ref} target="_blank" rel="noopener noreferrer">{ref}</a>
                 </li>
               ))}
             </ul>
-            {cveResult.attack_profile && (
-              <p><strong>Cyperf Profile:</strong> {cveResult.attack_profile}</p>
+            {cveResult.attack_profiles && cveResult.attack_profiles.length > 0 && (
+              <div>
+                <p><strong>Cyperf Strikes:</strong></p>
+                <ul className="ml-4 list-disc">
+                  {cveResult.attack_profiles.map((profile: string, i: number) => (
+                    <li key={i} className="text-green-400">{profile}</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </div>

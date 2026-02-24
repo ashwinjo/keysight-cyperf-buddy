@@ -53,7 +53,10 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
               {getSortIcon('published_date')}
             </th>
             <th className="px-4 py-2 text-left font-semibold text-gray-300">
-              Testable
+              Can Cyperf Test?
+            </th>
+            <th className="px-4 py-2 text-left font-semibold text-gray-300">
+              Cyperf Strikes
             </th>
           </tr>
         </thead>
@@ -67,6 +70,19 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
               </td>
               <td className="px-4 py-2">
                 <Badge testable={cve.testable} />
+              </td>
+              <td className="px-4 py-2 text-gray-400 text-xs max-w-xs">
+                {cve.attack_profiles && cve.attack_profiles.length > 0 ? (
+                  <div className="flex flex-col gap-1">
+                    {cve.attack_profiles.map((profile, idx) => (
+                      <span key={idx} className="block bg-gray-800 px-2 py-1 rounded text-gray-300">
+                        {profile}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-500">—</span>
+                )}
               </td>
             </tr>
           ))}

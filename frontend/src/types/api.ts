@@ -12,14 +12,14 @@
 
 // CVE data structures (match Phase 3 backend responses)
 export interface CVEResponse {
-  id: string;                      // CVE-XXXX-XXXXX
-  cvss_v3_1_score: number;        // 0-10
+  id: string;                          // CVE-XXXX-XXXXX
+  cvss_v3_1_score: number;            // 0-10
   cvss_v4_0_score: number | null;
   description: string;
-  published_date: string;          // ISO 8601
+  published_date: string;              // ISO 8601
   references: string[];
-  testable: boolean;               // Set by Cyperf sync job
-  attack_profile: string | null;  // Cyperf attack profile name, if testable
+  testable: boolean;                   // Set by Cyperf sync job (live comparison)
+  attack_profiles: string[];           // All Cyperf strike names for this CVE
 }
 
 export interface BrowseListResponse {
