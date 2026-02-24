@@ -10,9 +10,16 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import Settings
+from db.ai_cves import AICve
 from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
 from db.sync_metadata import SyncMetadata
-from services.cyperf_service import CyperfAPIError, CyperfConnectionError, CyperfService
+from services.cyperf_service import (
+    AIStrikeRecord,
+    CyperfAPIError,
+    CyperfConnectionError,
+    CyperfService,
+    StrikeFetchResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +100,10 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
                 password=settings.cyperf_password,
             )
 
-            # Fetch all CVE→Strike mappings (paginated, batched)
-            cve_mappings = await cyperf_service.fetch_cve_strike_mappings()
+            # Fetch all CVE→Strike mappings and AI-type strikes (paginated, batched)
+            fetch_result: StrikeFetchResult = await cyperf_service.fetch_cve_strike_mappings()
+            cve_mappings = fetch_result.cve_mappings
+            ai_strikes: list[AIStrikeRecord] = fetch_result.ai_strikes
             cves_count = len(cve_mappings)
 
             if cves_count == 0:
@@ -104,14 +113,32 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
                     break
                 continue
 
-            # Atomic full-replace: delete all existing, insert fresh
+            # Atomic full-replace: delete all existing rows from both tables,
+            # then insert fresh data. Both tables are updated in a single
+            # transaction — if either insert fails, both roll back.
             try:
                 async with session.begin():
                     await session.execute(delete(CvrfCveStrikeMappings))
                     for cve_id, strike_name in cve_mappings.items():
                         session.add(CvrfCveStrikeMappings(cve_id=cve_id, strike_name=strike_name))
 
+                    # Full-replace AI strikes in the same transaction
+                    await session.execute(delete(AICve))
+                    for record in ai_strikes:
+                        session.add(
+                            AICve(
+                                id=record.row_id,
+                                cve_id=record.cve_id,
+                                strike_name=record.strike_name,
+                                strike_type=record.strike_type,
+                                metadata=record.metadata_json,
+                            )
+                        )
+
                 logger.info(f"Full-replace sync: inserted {cves_count} CVE-Strike mappings")
+                logger.info(
+                    f"Full-replace sync: inserted {len(ai_strikes)} AI strike rows into ai_cves"
+                )
 
                 # Write JSON artifact (outside transaction — non-fatal if write fails)
                 try:
