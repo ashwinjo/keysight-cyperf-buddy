@@ -13,7 +13,7 @@
 - [x] **Phase 1: Project Setup + Infrastructure** - Scaffold project, configure secrets management, initialize database and Redis, establish dev tooling
 - [ ] **Phase 2: Backend API + NVD Integration** - FastAPI service with NVD query layer, caching, search and browse endpoints, rate-limit resilience
 - [x] **Phase 3: Cyperf Integration + Sync Engine** - Connect cyperf-api-wrapper, implement background sync scheduler, compute CVE testability intersection
-- [ ] **Phase 3.1: Cyperf CVE Ingestion Refactor** (INSERTED) - Rework Cyperf sync pipeline using ApplicationResourcesApi.get_resources_strikes(); ingest CVE→Strike JSON mappings into persistent DB for UI cross-reference
+- [x] **Phase 3.1: Cyperf CVE Ingestion Refactor** (INSERTED) - Rework Cyperf sync pipeline using ApplicationResourcesApi.get_resources_strikes(); ingest CVE→Strike JSON mappings into persistent DB for UI cross-reference
 - [x] **Phase 4: Frontend UI** - React SPA with dark Shodan aesthetic, search/browse pages, testability badges, column sorting, navigation (completed 2026-02-23)
 - [ ] **Phase 5: Batch Processing + Export** - Async batch CVE import, results display, CSV export
 
@@ -100,9 +100,9 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 6. The refactored sync handles partial/malformed Cyperf responses gracefully (same degradation patterns as Phase 3)
 
 **Plans**: 3 plans
-- [ ] 03.1-01-PLAN.md — DB model + Alembic migration for cverf_cve_strike_mappings table
-- [ ] 03.1-02-PLAN.md — Refactor cyperf_service.py (ApplicationResourcesApi) + sync_service.py (full-replace + JSON artifact)
-- [ ] 03.1-03-PLAN.md — Update cve_service.py/routes/cve.py (attack_profiles array) + admin.py + test suite
+- [x] 03.1-01-PLAN.md — DB model + Alembic migration for cverf_cve_strike_mappings table
+- [x] 03.1-02-PLAN.md — Refactor cyperf_service.py (ApplicationResourcesApi) + sync_service.py (full-replace + JSON artifact)
+- [x] 03.1-03-PLAN.md — Update cve_service.py/routes/cve.py (attack_profiles array) + admin.py + test suite
 
 ### Phase 4: Frontend UI
 

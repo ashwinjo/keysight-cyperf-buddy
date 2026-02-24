@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-23
-**Session:** Phase 2 Plan 02 complete - Backend API with NVD integration and Redis caching
+**Session:** Phase 3.1 Plan 03 complete - Query layer migrated to cverf_cve_strike_mappings; 34 tests passing
 
 ---
 
@@ -17,17 +17,18 @@
 
 ## Current Position
 
-**Active Phase:** 2
-**Active Plan:** 02-01-PLAN (complete) + 02-02-PLAN (complete)
-**Status:** Phase 2 complete
+**Active Phase:** 3.1
+**Active Plan:** 03.1-03-PLAN (complete)
+**Status:** Phase 3.1 complete
 
 **Progress:**
 [██████████] 100%
-Phase 1 [Project Setup + Infrastructure]     [x] Complete (7/7 tasks)
-Phase 2 [Backend API + NVD Integration]      [x] Complete (10/10 tasks, 1/1 plans)
-Phase 3 [Cyperf Integration + Sync Engine]   [x] Complete (11/11 tasks, 2/2 plans)
-Phase 4 [Frontend UI]                        [ ] Ready (depends on Phase 2 OR Phase 3 alone)
-Phase 5 [Batch Processing + Export]          [ ] Not started (depends on Phase 2 + 3 + 4)
+Phase 1 [Project Setup + Infrastructure]           [x] Complete (7/7 tasks)
+Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/2 plans)
+Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
+Phase 3.1 [Cyperf CVE Ingestion Refactor]          [x] Complete (8/8 tasks, 3/3 plans)
+Phase 4 [Frontend UI]                              [ ] Ready (all backend APIs complete)
+Phase 5 [Batch Processing + Export]                [ ] Not started (depends on Phase 2 + 3 + 4)
 
 Overall: 3/5 phases complete (60%)
 ```
@@ -42,11 +43,12 @@ Overall: 3/5 phases complete (60%)
 | v1 requirements covered | 21/21 | 21/21 |
 | Phases defined | 5 | 5 |
 | Phases complete | 5 | 3 |
-| Plans executed | ? | 6 (01-01 through 03-02, 02-01 merged) |
-| Tests passing | TBD | 24/24 integration tests (Phase 2) |
+| Plans executed | ? | 9 (01-01 through 03.1-03) |
+| Tests passing | TBD | 34/34 integration tests (Phase 3.1) |
 | Phase 1 success criteria | 5/5 | 5/5 |
 | Phase 2 success criteria | 10/10 | 10/10 |
 | Phase 3 success criteria | 5/5 | 5/5 |
+| Phase 3.1 success criteria | 6/6 | 6/6 |
 
 ---
 | Phase 04-frontend-ui P01 | 6 | 9 tasks | 14 files |
@@ -122,6 +124,9 @@ Phase 1 (Setup) ✓
 - [Phase 03.1-cyperf-cve-ingestion-refactor]: Composite PK (cve_id, strike_name) for cverf_cve_strike_mappings — no FK to cves.id; Cyperf data ingested independently of NVD
 - [Phase 03.1-cyperf-cve-ingestion-refactor]: cyperf package added to requirements.txt (named 'cyperf' on PyPI, v7.0.6, not 'cyperf-api-wrapper')
 - [Phase 03.1-cyperf-cve-ingestion-refactor]: sync_cyperf_cves() preserved as backward-compatible wrapper; primary data path is fetch_cve_strike_mappings() called directly from sync_service.py
+- [Phase 03.1-cyperf-cve-ingestion-refactor Plan 03]: Two-step batch-load pattern for strike names (select CVEs, then IN-clause batch for strikes) — avoids cross-dialect aggregate functions
+- [Phase 03.1-cyperf-cve-ingestion-refactor Plan 03]: Pydantic field_validator coerces testable=None->False for backward Redis cache compat without requiring cache flush
+- [Phase 03.1-cyperf-cve-ingestion-refactor Plan 03]: engine.dispose() before raw asyncpg.connect() in test teardown — required for pool isolation in pytest-asyncio auto mode
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -153,21 +158,21 @@ None currently. Phases 1-3 complete and operational.
 
 ## Next Actions
 
-**Phase 2 COMPLETE.** Ready to execute:
+**Phase 3.1 COMPLETE.** All backend APIs ready. Ready to execute:
 
 ### Option A: Execute Phase 4 (Frontend UI)
 - Build React SPA with Vite + Tailwind + shadcn/ui
-- Search/Browse pages using Phase 2 `/cve/search` and `/cve/latest` endpoints
-- Status bar showing last sync timestamp (from Phase 3)
-- Testability badges for CVEs in Cyperf (from Phase 3)
+- Search/Browse pages using `/cve/search` (testable bool + attack_profiles list) and `/cve/latest`
+- Status bar showing last sync timestamp (from `/admin/sync-status`)
+- Testability badges using `attack_profiles: list[str]` from new schema
 - Estimated: 2-3 days
 
 ### Option B: Execute Phase 5 (Batch Processing + Export)
-- Requires Phase 2 + Phase 3 + (optionally) Phase 4
+- Requires Phase 2 + Phase 3 + Phase 3.1 + (optionally) Phase 4
 - Bulk CVE export, scheduled reports, CSV generation
 - Estimated: 1-2 days
 
-**Recommended:** Execute Phase 4 first (frontend unblocked by Phase 2 completion), then Phase 5
+**Recommended:** Execute Phase 4 (frontend unblocked, all backend APIs production-ready)
 
 ---
 
@@ -190,6 +195,7 @@ To resume this project from a cold start:
 | Phase 1 | ✓ Complete | 2026-02-23 06:17:33Z | ~1 hour |
 | Phase 2 | ✓ Complete | 2026-02-23 11:00:00Z | ~2 hours |
 | Phase 3 | ✓ Complete | 2026-02-23 XX:XX:XXZ | ~2 hours |
+| Phase 3.1 | ✓ Complete | 2026-02-23 14:00:00Z | ~3 hours |
 | Phase 4 | [ ] Not started | — | Est. 2-3 days |
 | Phase 5 | [ ] Not started | — | Est. 1-2 days |
 
