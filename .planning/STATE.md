@@ -179,6 +179,7 @@ None currently. Phases 1-3 complete and operational.
 | 1 | Browse tab shows only synced CVEs with Cyperf strikes | 2026-02-24 | 46d196d | [1-browse-tab-shows-only-synced-cves-with-c](./quick/1-browse-tab-shows-only-synced-cves-with-c/) |
 | 2 | Create unified startup script for backend containers and frontend | 2026-02-24 | a735759 | [2-create-unified-startup-script-for-backen](./quick/2-create-unified-startup-script-for-backen/) |
 | 3 | Implement AI-type strike ingestion with ai_cves table | 2026-02-24 | a8d837e | [3-implement-ai-type-strike-ingestion-with-](./quick/3-implement-ai-type-strike-ingestion-with-/) |
+| 4 | Rename navigation tabs and create Cyperf AI CVEs tab | 2026-02-24 | baf8ec2 | [4-rename-navigation-tabs-and-create-cyperf](./quick/4-rename-navigation-tabs-and-create-cyperf/) |
 
 ---
 
