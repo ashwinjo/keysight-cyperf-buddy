@@ -2,12 +2,20 @@ import { useState, useMemo } from 'react';
 import { useLatestCVEs } from '../hooks/useAPI';
 import { SortState, CVEResponse } from '../types/api';
 import DataTable from '../components/shared/DataTable';
+import { ContactFormSidebar } from '../components/contact/ContactFormSidebar';
 
 const PAGE_SIZE = 2500; // Load all ~2195 CVEs from Cyperf in one request
 
 export default function BrowsePage() {
   const [searchInput, setSearchInput] = useState('');
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
+  const [contactSidebarOpen, setContactSidebarOpen] = useState(false);
+  const [selectedCVE, setSelectedCVE] = useState<CVEResponse | null>(null);
+
+  const handleRowAction = (cve: CVEResponse) => {
+    setSelectedCVE(cve);
+    setContactSidebarOpen(true);
+  };
 
   // Load ALL CVEs from cverf_cve_strike_mappings table
   // Show ONLY synced CVEs (testable = true)
@@ -89,7 +97,24 @@ export default function BrowsePage() {
         isLoading={isLoading}
         sortState={sortState}
         onSort={handleSort}
+        onRowAction={handleRowAction}
+        rowActionLabel="Let's Discuss"
       />
+
+      {selectedCVE && (
+        <ContactFormSidebar
+          isOpen={contactSidebarOpen}
+          onClose={() => {
+            setContactSidebarOpen(false);
+            setSelectedCVE(null);
+          }}
+          cveId={selectedCVE.id}
+          testable={selectedCVE.testable}
+          context="discuss"
+          cvssScore={selectedCVE.cvss_v3_1_score ?? null}
+          attackProfiles={selectedCVE.attack_profiles}
+        />
+      )}
     </div>
   );
 }
