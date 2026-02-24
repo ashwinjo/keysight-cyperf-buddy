@@ -22,7 +22,7 @@
 **Status:** Phase 2 complete
 
 **Progress:**
-```
+[█████████░] 89%
 Phase 1 [Project Setup + Infrastructure]     [x] Complete (7/7 tasks)
 Phase 2 [Backend API + NVD Integration]      [x] Complete (10/10 tasks, 1/1 plans)
 Phase 3 [Cyperf Integration + Sync Engine]   [x] Complete (11/11 tasks, 2/2 plans)
@@ -51,6 +51,7 @@ Overall: 3/5 phases complete (60%)
 ---
 | Phase 04-frontend-ui P01 | 6 | 9 tasks | 14 files |
 | Phase 04-frontend-ui P04-02 | 7 | 5 tasks | 4 files |
+| Phase 03.1-cyperf-cve-ingestion-refactor P01 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -77,14 +78,19 @@ Overall: 3/5 phases complete (60%)
 - All Cyperf API responses must be validated through Pydantic models before DB write.
 - Admin endpoints never return 5xx errors; always HTTP 200 with degraded data if needed.
 
+### Roadmap Evolution
+
+- Phase 3.1 inserted after Phase 3: Cyperf CVE Ingestion Refactor (URGENT) — Rework Cyperf sync pipeline to use ApplicationResourcesApi.get_resources_strikes() pattern from info_fetch.py; ingest JSON CVE→Strike mappings into persistent DB for UI cross-reference
+
 ### Phase Dependencies
 
 ```
 Phase 1 (Setup) ✓
   └── Phase 2 (Backend API + NVD) [ ]
         └── Phase 3 (Cyperf + Sync) ✓
-              └── Phase 4 (Frontend UI) [ ]
-                    └── Phase 5 (Batch) [ ]
+              └── Phase 3.1 (Cyperf CVE Ingestion Refactor) [ ] (INSERTED)
+                    └── Phase 4 (Frontend UI) [ ]
+                          └── Phase 5 (Batch) [ ]
 ```
 
 **Execution order flexibility:**
@@ -112,6 +118,7 @@ Phase 1 (Setup) ✓
 3. **Pre-commit hooks simplified** — Disabled detect-secrets due to plugin version conflicts; .gitignore blocks .env effectively
 4. **Dark theme baseline in frontend** — Shodan aesthetic (#0D1117) ready for Phase 4 UI refinement
 5. **All services use Docker bridge network** — service-to-service communication via container names (postgres, redis, api)
+- [Phase 03.1-cyperf-cve-ingestion-refactor]: Composite PK (cve_id, strike_name) for cverf_cve_strike_mappings — no FK to cves.id; Cyperf data ingested independently of NVD
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
