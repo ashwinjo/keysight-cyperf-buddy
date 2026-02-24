@@ -24,13 +24,16 @@ export interface CVEResponse {
 }
 
 // AI CVE entry from the ai_cves table (Cyperf AI-generated attack variants)
+// description, severity, and cvss_score are returned as null by the backend
+// until enrichment from a secondary source is implemented. id maps to
+// AICve.cve_id (synthetic NoCVE_cyperf<uuid5> identifier, not the uuid4 PK).
 export interface AiCVEResponse {
-  id: string;                        // CVE-XXXX-XXXXX (source CVE)
-  description: string;               // AI-generated or source CVE description
-  severity: string | null;           // e.g. "HIGH", "CRITICAL" — from ai_cves record
-  cvss_score: number | null;         // Optional CVSS score if available
-  ai_strike_name: string | null;     // AI-generated strike identifier
-  generated_at: string | null;       // ISO 8601 timestamp when AI entry was created
+  id: string;                        // NoCVE_cyperf<uuid5> synthetic ID (not a real CVE ID)
+  description: string | null;        // Not stored in ai_cves — always null for now
+  severity: string | null;           // Not stored in ai_cves — always null for now
+  cvss_score: number | null;         // Not stored in ai_cves — always null for now
+  ai_strike_name: string | null;     // Cyperf AI strike name (maps to AICve.strike_name)
+  generated_at: string | null;       // ISO 8601 timestamp (maps to AICve.created_at)
 }
 
 export interface BrowseListResponse {
