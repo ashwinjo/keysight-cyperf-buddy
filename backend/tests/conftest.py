@@ -14,6 +14,8 @@ from sqlalchemy.orm import sessionmaker
 os.environ.setdefault("CYPERF_CONTROLLER_IP", "test-host")
 os.environ.setdefault("CYPERF_USERNAME", "test-user")
 os.environ.setdefault("CYPERF_PASSWORD", "test-password")
+os.environ.setdefault("SMTP_USERNAME", "test@keysight.com")
+os.environ.setdefault("SMTP_PASSWORD", "test-password")
 
 from database import Base, get_db  # noqa: E402
 from dependencies import get_cache_service, get_nvd_client  # noqa: E402
