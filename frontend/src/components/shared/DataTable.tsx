@@ -37,15 +37,6 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
             >
               CVE ID {getSortIcon('cve_id')}
             </th>
-            <th className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase">
-              CNA
-            </th>
-            <th
-              onClick={() => handleHeaderClick('cvss')}
-              className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase cursor-pointer hover:bg-luxury-bg-subtle transition"
-            >
-              CVSS Score {getSortIcon('cvss')}
-            </th>
             <th
               onClick={() => handleHeaderClick('published_date')}
               className="px-6 py-4 text-left font-semibold text-luxury-accent text-xs tracking-luxury uppercase cursor-pointer hover:bg-luxury-bg-subtle transition"
@@ -64,18 +55,6 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
           {data.map((cve) => (
             <tr key={cve.id} className="hover:bg-luxury-bg transition-colors duration-150">
               <td className="px-6 py-4 font-mono text-luxury-accent text-xs">{cve.id}</td>
-              <td className="px-6 py-4 text-luxury-text text-sm">
-                {cve.cna ? (
-                  <span className="font-semibold text-luxury-text-secondary">{cve.cna}</span>
-                ) : (
-                  <span className="text-luxury-text-secondary/60">—</span>
-                )}
-              </td>
-              <td className="px-6 py-4 text-luxury-text font-semibold">
-                <span className="inline-block px-3 py-1 bg-luxury-bg rounded border border-luxury-border/50">
-                  {cve.cvss_v3_1_score}
-                </span>
-              </td>
               <td className="px-6 py-4 text-luxury-text-secondary text-sm">
                 {new Date(cve.published_date).toLocaleDateString()}
               </td>

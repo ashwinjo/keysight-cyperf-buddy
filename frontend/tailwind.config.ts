@@ -21,13 +21,13 @@ const config: Config = {
           black: "#000000",         // Black
           white: "#FFFFFF",         // White
         },
-        // Alias for backward compatibility - dark theme with black background
+        // Alias for backward compatibility - refined dark theme
         luxury: {
-          bg: "#000000",            // Black background
-          "bg-subtle": "#1a1a1a",   // Very dark gray
-          border: "#333333",        // Dark border
+          bg: "#111111",            // Deep charcoal (refined, not pure black)
+          "bg-subtle": "#1f1f1f",   // Subtle charcoal
+          border: "#2a2a2a",        // Dark gray border
           text: "#FFFFFF",          // White text
-          "text-secondary": "#AAAAAA", // Light gray text
+          "text-secondary": "#B8B8B8", // Light gray text
           accent: "#EF3B39",        // Keysight Red (primary)
           "accent-alt": "#666666",  // Gray secondary
         },
