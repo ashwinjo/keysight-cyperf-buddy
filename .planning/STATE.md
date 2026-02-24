@@ -180,6 +180,7 @@ None currently. Phases 1-3 complete and operational.
 | 2 | Create unified startup script for backend containers and frontend | 2026-02-24 | a735759 | [2-create-unified-startup-script-for-backen](./quick/2-create-unified-startup-script-for-backen/) |
 | 3 | Implement AI-type strike ingestion with ai_cves table | 2026-02-24 | a8d837e | [3-implement-ai-type-strike-ingestion-with-](./quick/3-implement-ai-type-strike-ingestion-with-/) |
 | 4 | Rename navigation tabs and create Cyperf AI CVEs tab | 2026-02-24 | baf8ec2 | [4-rename-navigation-tabs-and-create-cyperf](./quick/4-rename-navigation-tabs-and-create-cyperf/) |
+| 5 | Implement AI CVE sync workflow and GET /api/ai-cves endpoint | 2026-02-24 | 71a27cd | [5-implement-ai-cve-sync-workflow-and-get-a](./quick/5-implement-ai-cve-sync-workflow-and-get-a/) |
 
 ---
 
