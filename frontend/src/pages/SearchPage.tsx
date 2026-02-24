@@ -1,14 +1,22 @@
 import { useState } from 'react';
 import { useSearchCVE } from '../hooks/useAPI';
-import { SortState } from '../types/api';
+import { SortState, ContactContext } from '../types/api';
 import SearchForm from '../components/pages/SearchForm';
 import DataTable from '../components/shared/DataTable';
+import { ContactFormSidebar } from '../components/contact/ContactFormSidebar';
 
 export default function SearchPage() {
   const [searchInput, setSearchInput] = useState<string | null>(null);
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
+  const [contactSidebarOpen, setContactSidebarOpen] = useState(false);
+  const [contactContext, setContactContext] = useState<ContactContext>('discuss');
 
   const { data: cveResult, isLoading } = useSearchCVE(searchInput);
+
+  const openSidebar = (ctx: ContactContext) => {
+    setContactContext(ctx);
+    setContactSidebarOpen(true);
+  };
 
   // Convert single CVE result to array for DataTable
   const tableData = cveResult ? [cveResult] : [];
@@ -120,8 +128,38 @@ export default function SearchPage() {
                 </ul>
               </div>
             )}
+
+            <div className="pt-4 border-t border-luxury-border flex gap-3">
+              {cveResult.testable ? (
+                <button
+                  onClick={() => openSidebar('discuss')}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold rounded transition-colors"
+                >
+                  Let's Discuss
+                </button>
+              ) : (
+                <button
+                  onClick={() => openSidebar('feature_request')}
+                  className="px-4 py-2 bg-luxury-bg-subtle hover:bg-luxury-accent/10 border border-luxury-accent/40 text-luxury-accent text-sm font-semibold rounded transition-colors"
+                >
+                  Request Feature
+                </button>
+              )}
+            </div>
           </div>
         </div>
+      )}
+
+      {cveResult && (
+        <ContactFormSidebar
+          isOpen={contactSidebarOpen}
+          onClose={() => setContactSidebarOpen(false)}
+          cveId={cveResult.id}
+          testable={cveResult.testable}
+          context={contactContext}
+          cvssScore={cveResult.cvss_v3_1_score ?? null}
+          attackProfiles={cveResult.attack_profiles}
+        />
       )}
     </div>
   );
