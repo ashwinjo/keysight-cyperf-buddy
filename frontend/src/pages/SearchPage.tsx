@@ -35,6 +35,17 @@ export default function SearchPage() {
     }
   };
 
+  const exampleCVEs = [
+    { id: 'CVE-2024-1234', name: 'Log4j RCE' },
+    { id: 'CVE-2021-44228', name: 'Apache Log4Shell' },
+    { id: 'CVE-2023-26360', name: 'Adobe ColdFusion' },
+    { id: 'CVE-2024-0519', name: 'Critical Vulnerability' },
+  ];
+
+  const handleExampleClick = (cveId: string) => {
+    setSearchInput(cveId);
+  };
+
   return (
     <div className="space-y-8 animate-in">
       <div>
@@ -50,6 +61,29 @@ export default function SearchPage() {
         onSearch={setSearchInput}
         isLoading={isLoading}
       />
+
+      {/* Example CVEs */}
+      <div className="card-luxury space-y-4">
+        <div>
+          <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold mb-4">
+            Try these examples
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {exampleCVEs.map((cve) => (
+              <button
+                key={cve.id}
+                onClick={() => handleExampleClick(cve.id)}
+                className="p-3 text-left rounded border border-luxury-border/50 bg-luxury-bg hover:bg-luxury-accent/10 hover:border-luxury-accent/30 transition-all duration-200 group"
+              >
+                <p className="font-mono text-sm font-semibold text-luxury-accent group-hover:text-luxury-accent-alt">
+                  {cve.id}
+                </p>
+                <p className="text-xs text-luxury-text-secondary mt-1">{cve.name}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {searchInput && (
         <div className="p-4 bg-luxury-bg-subtle border border-luxury-accent/30 rounded-lg text-luxury-text-secondary text-sm space-y-1 shadow-elegant">
