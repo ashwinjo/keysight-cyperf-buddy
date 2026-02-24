@@ -338,3 +338,108 @@ All checks passed against the running Docker stack (`cyperf_api_dev`):
 - The endpoint tests use `test_client` (ASGI transport), so no real HTTP server is needed; all tests complete in under 1 second.
 - `conftest.py` already had `SMTP_USERNAME` and `SMTP_PASSWORD` setdefault calls added in Plan 01 — no conftest changes required for Plan 04.
 - The pre-existing 11 failures are unrelated to email/contact functionality (they are SQLAlchemy v2 compatibility issues with Python 3.14 affecting the NVD and Cyperf test modules — pre-existing before this plan).
+
+---
+
+---
+
+# Plan 05 Summary: E2E Integration Test + SMTP Verification
+
+**Executed:** 2026-02-24
+**Status:** Complete
+**Commits:** 3 atomic commits tagged (04.1-05)
+
+---
+
+## What Was Built
+
+### `backend/tests/test_contact_e2e.py` — Live SMTP smoke test (new)
+
+Single test gated by `SMTP_LIVE_TEST=true` environment variable:
+
+- `test_live_smtp_send`: Builds `SMTPConfig` from real environment variables (`SMTP_SERVER`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_RECIPIENT_EMAIL`), renders a real subject and body via `render_email_subject` / `render_email_body`, and calls `send_contact_email` directly.
+- `@pytest.mark.skipif(not LIVE_TEST_ENABLED, reason="SMTP_LIVE_TEST not set")` — test is SKIPPED in all normal CI runs; no email is sent, no real credentials are required.
+- Subject is prefixed `[E2E TEST]` to distinguish live test sends from real customer contacts.
+- Email targets `ashwin.joshi@keysight.com` (overridable via `SMTP_RECIPIENT_EMAIL` env var).
+
+**Invocation:**
+```bash
+# Normal CI — 1 SKIPPED, no credentials needed
+pytest backend/tests/test_contact_e2e.py -v
+
+# Live delivery test — requires valid credentials in .env
+SMTP_LIVE_TEST=true pytest backend/tests/test_contact_e2e.py -v
+```
+
+---
+
+### `backend/tests/conftest.py` — SMTP_SERVER stub added
+
+- Added `os.environ.setdefault("SMTP_SERVER", "smtp.test.internal")` alongside the existing `SMTP_USERNAME` / `SMTP_PASSWORD` stubs.
+- Updated `SMTP_PASSWORD` stub value from `"test-password"` to `"test-password-not-real"` to be more explicit.
+- Added comment block explaining that stubs are overridden by actual `.env` values during live testing.
+- Ensures `Settings` / `get_settings()` never emits missing-credential warnings during any `pytest` run.
+
+---
+
+### `.env.example` — SMTP section expanded with inline documentation
+
+- Added 3-line comment block before SMTP variables:
+  - Credential acquisition guidance (Keysight IT / app-specific account)
+  - TLS port selection (STARTTLS 587 vs implicit TLS 465)
+  - Rotation policy (quarterly) and `.gitignore` reminder
+- Added `SMTP_LIVE_TEST` invocation comment at the bottom of the SMTP section.
+
+---
+
+## Manual Browser Walkthrough Checklist (Task 2 from plan)
+
+This task is documentation-only — no code changes. Three walkthrough paths are defined in the plan for manual verification when a dev server is running:
+
+**Discuss path (testable CVE from Browse page):**
+1. Search for a testable CVE → expand detail card.
+2. Click "Let's Discuss" → ConfirmDialog appears.
+3. Cancel → no sidebar. Repeat → Continue → sidebar slides in.
+4. Submit without fields → validation errors visible.
+5. Fill all 4 fields → Send → loading state → success (green checkmark + email preview).
+6. Close → page intact.
+
+**Feature request path (non-testable CVE):**
+1. Find a non-testable CVE via `/cve/search?id=CVE-XXXX` (check `"testable": false`).
+2. "Request Feature" button (outlined) visible — no "Let's Discuss".
+3. Click → ConfirmDialog → Continue → sidebar title "Request Feature: CVE-XXXX".
+4. Submit → success state shows "Request Feature" context label in preview.
+
+**Browse page path:**
+1. Navigate to `/browse`.
+2. "Let's Discuss" column visible on each row.
+3. Click a row → sidebar opens with that CVE's ID.
+4. Close → table intact; no stale data on next open.
+
+---
+
+## Verification Results
+
+| Check | Expected | Actual |
+|-------|----------|--------|
+| `pytest tests/test_contact_e2e.py -v` (no env var) | 1 SKIPPED | 1 SKIPPED |
+| `pytest tests/test_email_service.py tests/test_contact_endpoint.py tests/test_contact_e2e.py -v` | 25 passed, 1 skipped | 25 passed, 1 skipped |
+| `conftest.py` has SMTP_SERVER stub | Yes | Added |
+| `.env.example` SMTP section has doc comments + live test hint | Yes | Added |
+| No new regressions in Phase 4.1 test suite | 25 pass | 25 passed |
+
+---
+
+## Notable Decisions
+
+1. **SMTP_LIVE_TEST flag at module level** — `LIVE_TEST_ENABLED` is evaluated once at import time (`os.environ.get("SMTP_LIVE_TEST", "false").lower() == "true"`). This is evaluated by `@pytest.mark.skipif` before collection, so the test is filtered out during collection — not at execution time. This minimizes any overhead from the test being collected in CI.
+2. **`SMTP_PASSWORD` stub updated to `"test-password-not-real"`** — Aligns with the plan spec; makes it unambiguous that the stub is never a real credential. No functional difference for test behavior.
+3. **Manual walkthrough not automated** — The plan explicitly scoped Task 2 as a manual checklist, not automated code. Vitest browser testing (Playwright-backed) would be the correct tool for automation but is out of scope for this phase.
+
+---
+
+## Architecture Notes
+
+- The E2E test intentionally calls `send_contact_email` directly (not via the FastAPI endpoint). This isolates SMTP connectivity verification from HTTP layer concerns. If you want to verify the full HTTP path end-to-end, use `curl` against a running backend.
+- The test is safe to run in any environment that has network access to `mail.keysight.com:587` and valid credentials in `.env`. It does not modify any database state.
+- Phase 4.1 is now complete. All 5 plans have been executed and committed. The sales funnel (contact form → email delivery) is production-ready pending SMTP credential provisioning.
