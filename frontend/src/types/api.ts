@@ -18,6 +18,7 @@ export interface CVEResponse {
   description: string;
   published_date: string;              // ISO 8601
   references: string[];
+  cna: string | null;                  // CVE Numbering Authority (CNA)
   testable: boolean;                   // Set by Cyperf sync job (live comparison)
   attack_profiles: string[];           // All Cyperf strike names for this CVE
 }

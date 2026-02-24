@@ -54,6 +54,12 @@ class CVEDetail(BaseModel):
         description="Reference URLs from NVD",
     )
 
+    # CNA (CVE Numbering Authority) — organization that submitted this CVE
+    cna: str | None = Field(
+        None,
+        description="CVE Numbering Authority (CNA) responsible for this CVE",
+    )
+
     # Testability — populated from cverf_cve_strike_mappings via LEFT JOIN
     testable: bool = Field(False, description="True if at least one Cyperf Strike covers this CVE")
     attack_profiles: list[str] = Field(

@@ -53,6 +53,7 @@ export default function SearchPage() {
         <div className="mt-6 p-4 bg-gray-900 border border-gray-700 rounded">
           <h2 className="text-lg font-semibold text-white mb-2">Details</h2>
           <div className="space-y-2 text-sm text-gray-300">
+            <p><strong>CNA:</strong> {cveResult.cna ? <span className="text-blue-400">{cveResult.cna}</span> : <span className="text-gray-500">Not specified</span>}</p>
             <p><strong>Description:</strong> {cveResult.description}</p>
             <p><strong>CVSS v3.1:</strong> {cveResult.cvss_v3_1_score}</p>
             {cveResult.cvss_v4_0_score && (

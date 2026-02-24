@@ -38,6 +38,7 @@ export const useSearchCVE = (cveId: string | null) => {
           description: backendCve.description,
           published_date: backendCve.published_date,
           references: backendCve.reference_urls || [],
+          cna: backendCve.cna,
           testable: backendCve.testable,
           attack_profiles: backendCve.attack_profiles || [],
         };
@@ -66,6 +67,7 @@ export const useLatestCVEs = (page = 1, pageSize = 25, onlyTestable = false) => 
         description: backendCve.description,
         published_date: backendCve.published_date,
         references: backendCve.reference_urls || [],
+        cna: backendCve.cna,
         testable: backendCve.testable,
         attack_profiles: backendCve.attack_profiles || [],
       }));

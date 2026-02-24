@@ -38,6 +38,9 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
               CVE ID
               {getSortIcon('cve_id')}
             </th>
+            <th className="px-4 py-2 text-left font-semibold text-gray-300">
+              CNA
+            </th>
             <th
               onClick={() => handleHeaderClick('cvss')}
               className="px-4 py-2 text-left font-semibold text-gray-300 cursor-pointer hover:bg-gray-800 transition"
@@ -64,6 +67,9 @@ export default function DataTable({ data, isLoading, onSort, sortState }: DataTa
           {data.map((cve) => (
             <tr key={cve.id} className="border-b border-gray-700 hover:bg-gray-900 transition">
               <td className="px-4 py-2 font-mono text-gray-200">{cve.id}</td>
+              <td className="px-4 py-2 text-gray-300 text-sm">
+                {cve.cna ? <span className="text-blue-400">{cve.cna}</span> : <span className="text-gray-500">—</span>}
+              </td>
               <td className="px-4 py-2 text-gray-300">{cve.cvss_v3_1_score}</td>
               <td className="px-4 py-2 text-gray-400">
                 {new Date(cve.published_date).toLocaleDateString()}

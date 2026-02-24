@@ -192,6 +192,9 @@ def extract_cve_fields(nvd_cve: object) -> dict:
     cvss_v4_severity = getattr(nvd_cve, "v40severity", None)
     cvss_v4_vector = getattr(nvd_cve, "v40vector", None)
 
+    # CNA (CVE Numbering Authority) — from sourceIdentifier (email/ID of reporting organization)
+    cna: str | None = getattr(nvd_cve, "sourceIdentifier", None)
+
     return {
         "id": nvd_cve.id,
         "description": description,
@@ -203,6 +206,7 @@ def extract_cve_fields(nvd_cve: object) -> dict:
         "cvss_v4_severity": cvss_v4_severity.upper() if cvss_v4_severity else None,
         "cvss_v4_vector": cvss_v4_vector,
         "reference_urls": reference_urls,
+        "cna": cna,
         # Testability defaults — populated by cve_service after querying cverf_cve_strike_mappings
         "testable": False,
         "attack_profiles": [],
