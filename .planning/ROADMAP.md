@@ -13,6 +13,7 @@
 - [x] **Phase 1: Project Setup + Infrastructure** - Scaffold project, configure secrets management, initialize database and Redis, establish dev tooling
 - [ ] **Phase 2: Backend API + NVD Integration** - FastAPI service with NVD query layer, caching, search and browse endpoints, rate-limit resilience
 - [x] **Phase 3: Cyperf Integration + Sync Engine** - Connect cyperf-api-wrapper, implement background sync scheduler, compute CVE testability intersection
+- [ ] **Phase 3.1: Cyperf CVE Ingestion Refactor** (INSERTED) - Rework Cyperf sync pipeline using ApplicationResourcesApi.get_resources_strikes(); ingest CVE→Strike JSON mappings into persistent DB for UI cross-reference
 - [x] **Phase 4: Frontend UI** - React SPA with dark Shodan aesthetic, search/browse pages, testability badges, column sorting, navigation (completed 2026-02-23)
 - [ ] **Phase 5: Batch Processing + Export** - Async batch CVE import, results display, CSV export
 
@@ -81,6 +82,27 @@ Note: Phase 1 is the prerequisite for all other phases. Redis and DB schema scaf
 - [x] 03-02-PLAN.md — Sync logic + graceful degradation + admin endpoints (perform_sync, error handling, GET/POST /admin endpoints, search integration)
 
 ---
+
+### Phase 3.1: Cyperf CVE Ingestion Refactor (INSERTED)
+
+**Goal**: Rework the Cyperf sync pipeline to use `ApplicationResourcesApi.get_resources_strikes()` from info_fetch.py pattern, ensuring reliable CVE→Attack Profile mappings are persisted to the database and available for UI cross-reference queries.
+
+**Depends on**: Phase 3
+
+**Requirements**: SEARCH-03, SEARCH-04, SYNC-02, SYNC-03, SYNC-04 (refines existing Phase 3 requirements)
+
+**Success Criteria** (what must be TRUE when this phase completes):
+1. CVE data fetching uses `ApplicationResourcesApi.get_resources_strikes()` API (from info_fetch.py pattern) instead of current Phase 3 approach
+2. All CVE→Strike/Attack Profile mappings are extracted from Cyperf response and stored in a structured database table
+3. The sync process generates and stores a JSON file of CVE→Strike mappings as an intermediate artifact
+4. UI search queries (`GET /cve/search?id=CVE-2024-1234`) correctly return testability and Attack Profile info from the new schema
+5. Existing Phase 3 tests pass with the refactored ingestion logic (no regression)
+6. The refactored sync handles partial/malformed Cyperf responses gracefully (same degradation patterns as Phase 3)
+
+**Plans**: 3 plans
+- [ ] 03.1-01-PLAN.md — DB model + Alembic migration for cverf_cve_strike_mappings table
+- [ ] 03.1-02-PLAN.md — Refactor cyperf_service.py (ApplicationResourcesApi) + sync_service.py (full-replace + JSON artifact)
+- [ ] 03.1-03-PLAN.md — Update cve_service.py/routes/cve.py (attack_profiles array) + admin.py + test suite
 
 ### Phase 4: Frontend UI
 
