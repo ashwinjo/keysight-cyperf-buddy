@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import SearchPage from './pages/SearchPage';
 import BrowsePage from './pages/BrowsePage';
 import BatchPage from './pages/BatchPage';
+import CyperfAiCvesPage from './pages/CyperfAiCvesPage';
+import WhatIsCyperfPage from './pages/WhatIsCyperfPage';
 import Navigation from './components/layout/Navigation';
 import StaleDataWarning from './components/layout/StaleDataWarning';
 import StatusBar from './components/layout/StatusBar';
@@ -22,6 +24,8 @@ export default function App(): React.ReactNode {
               <Route path="/" element={<SearchPage />} />
               <Route path="/browse" element={<BrowsePage />} />
               <Route path="/batch" element={<BatchPage />} />
+              <Route path="/ai-cves" element={<CyperfAiCvesPage />} />
+              <Route path="/what-is-cyperf" element={<WhatIsCyperfPage />} />
             </Routes>
           </main>
           <StatusBar />
