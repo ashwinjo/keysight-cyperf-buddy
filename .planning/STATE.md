@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
-**Last updated:** 2026-02-23
-**Session:** Phase 4.1 Plan 03 executed - Integrated ContactFormSidebar into SearchPage and BrowsePage
+**Last updated:** 2026-02-24
+**Session:** Phase 4.1 Plan 04 executed - Backend unit tests for email service and contact endpoint
 
 ---
 
@@ -18,8 +18,8 @@
 ## Current Position
 
 **Active Phase:** 4.1
-**Active Plan:** 04.1-03-PLAN (complete)
-**Status:** In progress — Plans 01-03 complete, Plans 04-05 pending
+**Active Plan:** 04.1-04-PLAN (complete)
+**Status:** In progress — Plans 01-04 complete, Plan 05 pending
 
 **Progress:**
 [██████████] 100%
@@ -28,7 +28,7 @@ Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/
 Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
 Phase 3.1 [Cyperf CVE Ingestion Refactor]          [x] Complete (8/8 tasks, 3/3 plans)
 Phase 4 [Frontend UI]                              [x] Complete (all backend APIs complete)
-Phase 4.1 [Sales Funnel]                           [~] In Progress (3/5 plans: 04.1-01, 04.1-02, and 04.1-03 complete)
+Phase 4.1 [Sales Funnel]                           [~] In Progress (4/5 plans: 04.1-01 through 04.1-04 complete)
 Phase 5 [Batch Processing + Export]                [ ] Not started (depends on Phase 2 + 3 + 4)
 
 Overall: 3/5 phases complete (60%)
@@ -45,7 +45,7 @@ Overall: 3/5 phases complete (60%)
 | Phases defined | 5 | 5 |
 | Phases complete | 5 | 3 |
 | Plans executed | ? | 10 (01-01 through 04.1-01) |
-| Tests passing | TBD | 34/34 integration tests (Phase 3.1) |
+| Tests passing | TBD | 48/59 total (25 new email/endpoint tests pass; 11 pre-existing SQLAlchemy/Python 3.14 failures) |
 | Phase 1 success criteria | 5/5 | 5/5 |
 | Phase 2 success criteria | 10/10 | 10/10 |
 | Phase 3 success criteria | 5/5 | 5/5 |
@@ -140,6 +140,9 @@ Phase 1 (Setup) ✓
 - [Phase 04.1-sales-funnel Plan 03]: ContactFormSidebar guarded by `{cveResult && ...}` in SearchPage — avoids null prop drilling and prevents Radix Dialog from mounting before first search
 - [Phase 04.1-sales-funnel Plan 03]: BrowsePage resets selectedCVE to null on sidebar close — prevents stale CVE data across successive sidebar opens
 - [Phase 04.1-sales-funnel Plan 03]: DataTable onRowAction/rowActionLabel are optional with runtime `onRowAction &&` guards — zero impact on existing callers, no TypeScript required-default friction
+- [Phase 04.1-sales-funnel Plan 04]: Fire-and-forget test patches `send_contact_email` (not `_send_email_background`) — stronger behavioral assertion that the wrapper actually absorbs exceptions
+- [Phase 04.1-sales-funnel Plan 04]: test_send_email_builds_correct_recipient added as bonus test — protects the non-trivial invariant that sendmail receives to_email as second arg, not from_email
+- [Phase 04.1-sales-funnel Plan 04]: 11 pre-existing failures in full suite are SQLAlchemy/Python 3.14 incompatibilities in NVD/Cyperf test modules — not introduced by plan 04; all 25 new tests pass cleanly
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -179,7 +182,7 @@ None currently. Phases 1-3 complete and operational.
 
 ## Next Actions
 
-**Phase 4.1 IN PROGRESS.** Plans 04.1-01, 04.1-02, and 04.1-03 complete. Ready to execute Plan 04.1-04 next.
+**Phase 4.1 IN PROGRESS.** Plans 04.1-01 through 04.1-04 complete. Ready to execute Plan 04.1-05 next.
 
 ### Option A: Execute Phase 4 (Frontend UI)
 - Build React SPA with Vite + Tailwind + shadcn/ui

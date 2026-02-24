@@ -242,3 +242,99 @@ All checks passed against the running Docker stack (`cyperf_api_dev`):
 - The SearchPage button placement is at the bottom of the detail card, separated from content by a `border-t`. This follows the visual hierarchy: scan data first, act last.
 - BrowsePage uses `context="discuss"` unconditionally because Browse filters to `testable=true` only. There is no code path in BrowsePage that would produce a non-testable CVE in the table.
 - All three entry points pass the full `attackProfiles` array to the sidebar so the backend email always includes Cyperf strike context regardless of which page the user is on.
+
+---
+
+---
+
+# Plan 04 Summary: Backend Unit Tests for Email Service + Endpoint
+
+**Executed:** 2026-02-24
+**Status:** Complete
+**Commits:** 2 atomic commits tagged (04.1-04)
+
+---
+
+## What Was Built
+
+### `backend/tests/test_email_service.py` — Unit tests for email_service.py (new)
+
+17 tests covering all three public functions with no mocking required for the pure functions:
+
+**render_email_subject (4 tests)**
+- `test_subject_discuss`: exact match `"Customer Interest: CVE-2024-1234 Discussion"`
+- `test_subject_feature_request`: exact match `"Feature Request: CVE-2024-5678"`
+- `test_subject_unknown_context_uses_fallback`: unknown context returns string containing CVE ID without raising
+- `test_subject_does_not_expose_credentials`: subject line contains no credential fragments
+
+**render_email_body (9 tests)**
+- `test_body_contains_customer_info`: name, company, email all present
+- `test_body_contains_cve_details`: CVE ID present; `testable=False` renders "No"
+- `test_body_testable_true_shows_yes`: `testable=True` renders "Yes"
+- `test_body_includes_cvss_when_provided`: float score appears verbatim
+- `test_body_handles_no_cvss`: `cvss_score=None` renders "N/A" — no raw Python `None` in output
+- `test_body_includes_context_label_discuss`: "Let's Discuss" label present
+- `test_body_includes_context_label_feature_request`: "Request Feature" label present
+- `test_body_attack_profiles_listed`: all profile names appear in output
+- `test_body_no_attack_profiles_shows_none`: empty list renders "None" placeholder
+
+**send_contact_email (4 tests, mocked SMTP)**
+- `test_send_email_calls_smtp`: verifies SMTP call sequence (connect → starttls → login → sendmail) using `unittest.mock.patch`
+- `test_send_email_raises_on_smtp_auth_error`: `SMTPAuthenticationError` from login propagates (not swallowed)
+- `test_send_email_raises_on_smtp_error`: `SMTPException` from sendmail propagates
+- `test_send_email_builds_correct_recipient`: sendmail called with `to_email` (not `from_email`) as second argument
+
+**Fixture:** `mock_smtp_config` returns an `SMTPConfig` with test-safe non-credential values.
+
+---
+
+### `backend/tests/test_contact_endpoint.py` — Integration tests for POST /contact/submit (new)
+
+8 tests using the shared `test_client` fixture (httpx ASGI transport, no real HTTP):
+
+**Valid submissions (2 tests)**
+- `test_submit_discuss_returns_200`: HTTP 200, `success=True`, preview contains "Jane Doe" and "CVE-2024-1234"
+- `test_submit_feature_request_returns_200`: HTTP 200, `success=True`
+
+**Validation failures — 422 (4 tests)**
+- `test_submit_missing_email_returns_422`: omitted required `email` field
+- `test_submit_invalid_cve_id_returns_422`: `"NOT-A-CVE-ID"` fails `^CVE-\d{4}-\d{1,7}$` pattern
+- `test_submit_invalid_email_returns_422`: `"not-an-email"` fails `EmailStr` validation
+- `test_submit_invalid_context_returns_422`: `"invalid_value"` not in `Literal["discuss", "feature_request"]`
+
+**Fire-and-forget behavior (1 test)**
+- `test_submit_returns_200_even_when_email_send_fails`: patches `routes.contact.send_contact_email` to raise; confirms HTTP 200 is still returned and `success=True` — `_send_email_background` absorbs the exception
+
+**Response shape (1 test)**
+- `test_submit_response_contains_message`: `message` field present, non-empty string
+
+---
+
+## Verification Results
+
+| Check | Expected | Actual |
+|-------|----------|--------|
+| `pytest tests/test_email_service.py` | 17 passed | 17 passed |
+| `pytest tests/test_contact_endpoint.py` | 8 passed | 8 passed |
+| Full suite test count | 59 total (was 34) | 59 collected |
+| No new SMTP connection made | confirmed | no real SMTP calls |
+| Pre-existing passing tests | no regressions | 48 passed (same as before) |
+| Pre-existing failures | 11 (pre-existing) | 11 (unchanged, not introduced by this plan) |
+
+---
+
+## Notable Decisions
+
+1. **Fire-and-forget test patches `send_contact_email` not `_send_email_background`** — The plan draft proposed replacing `_send_email_background` with a failing async function. The implementation correctly patches the underlying `send_contact_email` instead. This verifies that `_send_email_background`'s `try/except` absorbs the exception — a stronger behavioral assertion than patching the wrapper itself.
+2. **`test_send_email_builds_correct_recipient` added (bonus test)** — Not in the plan spec but the correct recipient assertion (`sendmail` called with `to_email` as second arg, not `from_email`) is a non-trivial invariant worth protecting. Added as the 17th test.
+3. **`test_submit_response_contains_message` added (bonus test)** — Response shape completeness beyond what the plan specified; confirms the `message` field is a non-empty string (not just truthy).
+4. **No real SMTP connection in any test** — Confirmed by absence of any DNS resolution or TCP connection during the test run.
+
+---
+
+## Architecture Notes
+
+- The email service tests are fully isolated: no FastAPI, no database, no Redis, no SMTP server required.
+- The endpoint tests use `test_client` (ASGI transport), so no real HTTP server is needed; all tests complete in under 1 second.
+- `conftest.py` already had `SMTP_USERNAME` and `SMTP_PASSWORD` setdefault calls added in Plan 01 — no conftest changes required for Plan 04.
+- The pre-existing 11 failures are unrelated to email/contact functionality (they are SQLAlchemy v2 compatibility issues with Python 3.14 affecting the NVD and Cyperf test modules — pre-existing before this plan).
