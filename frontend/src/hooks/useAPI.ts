@@ -84,9 +84,10 @@ export const useLatestCVEs = (page = 1, pageSize = 25) => {
   });
 };
 
-// Hook 3: Fetch AI-generated CVEs from the ai_cves table
-// Returns a flat list of AI CVE records. Fetches up to 10000 records per API limit.
-// For proper pagination with >10000 records, implement page-based loading in the component.
+// Hook 3: Fetch AI-generated strikes from the ai_cves table
+// Returns only AI strikes (those with URL references and <3 refs).
+// Filters to only AI-type strikes, excluding other non-CVE entities.
+// Fetches up to 10000 records per API limit.
 // Endpoint may not yet be implemented — axios will throw a 404/500 which react-query
 // surfaces as an error state.
 export const useAiCVEs = () => {
@@ -96,7 +97,10 @@ export const useAiCVEs = () => {
       const res = await axios.get<{ results: AiCVEResponse[]; total: number }>(
         `${API_BASE}/ai-cves`,
         {
-          params: { limit: 10000 }, // Backend max limit; fetch all records for client-side filtering
+          params: {
+            limit: 10000,  // Backend max limit
+            ai_only: true, // Filter to only AI strikes with URL refs
+          },
         }
       );
       return res.data.results || [];

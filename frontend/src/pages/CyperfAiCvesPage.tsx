@@ -87,10 +87,10 @@ export default function CyperfAiCvesPage() {
     <div className="space-y-8 animate-in">
       <div>
         <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
-          All Cyperf Non CVE Strikes
+          Cyperf AI Strike
         </h1>
         <p className="text-luxury-text-secondary tracking-tight">
-          AI-generated and non-CVE attack variants from Cyperf
+          AI-generated attack strikes from Cyperf with URL-based references
         </p>
       </div>
 
