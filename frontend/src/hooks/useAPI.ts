@@ -123,3 +123,31 @@ export const useSyncStatus = () => {
     refetchInterval: 1000 * 60 * 5, // Auto-refetch every 5 minutes
   });
 };
+
+// Hook 5: Fetch Cyperf application types
+export const useCyperfApplicationTypes = () => {
+  return useQuery({
+    queryKey: ['cyperf', 'application-types'],
+    queryFn: async () => {
+      const res = await axios.get<{ results: Array<{ id: string; name: string; description?: string }>; total: number }>(
+        `${API_BASE}/cyperf-applications/types`
+      );
+      return res.data.results || [];
+    },
+    staleTime: 1000 * 60 * 5,  // 5 minutes
+  });
+};
+
+// Hook 6: Fetch Cyperf applications
+export const useCyperfApplications = () => {
+  return useQuery({
+    queryKey: ['cyperf', 'applications'],
+    queryFn: async () => {
+      const res = await axios.get<{ results: Array<{ id: string; name: string; description?: string }>; total: number }>(
+        `${API_BASE}/cyperf-applications`
+      );
+      return res.data.results || [];
+    },
+    staleTime: 1000 * 60 * 5,  // 5 minutes
+  });
+};

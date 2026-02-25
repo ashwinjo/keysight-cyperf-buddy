@@ -147,3 +147,71 @@ async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
             status_code=500,
             detail=f"Failed to trigger sync: {str(e)}",
         )
+
+
+@router.post("/sync-cyperf-applications")
+async def sync_cyperf_applications(
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Manually trigger Cyperf applications and application types sync.
+
+    Fetches all applications and application types from Cyperf Controller,
+    saves them to JSON files, and ingests into the database.
+
+    Returns:
+        HTTP 202 Accepted with status message
+
+    Note:
+        This endpoint returns immediately; the actual sync happens synchronously
+        before returning.
+    """
+    try:
+        from config import get_settings
+        from services.cyperf_applications_service import (
+            CyperfApplicationsService,
+        )
+
+        settings = get_settings()
+
+        # Initialize service
+        service = CyperfApplicationsService(
+            controller_ip=settings.cyperf_controller_ip,
+            username=settings.cyperf_username,
+            password=settings.cyperf_password,
+        )
+
+        # Fetch data
+        logger.info("Fetching Cyperf applications and application types...")
+        app_types = await service.fetch_application_types()
+        apps = await service.fetch_applications()
+
+        # Save to JSON
+        logger.info("Saving to JSON files...")
+        from services.cyperf_applications_service import (
+            APPLICATION_TYPES_FILE,
+            APPLICATIONS_FILE,
+        )
+
+        service._save_to_json(APPLICATION_TYPES_FILE, app_types)
+        service._save_to_json(APPLICATIONS_FILE, apps)
+
+        # Ingest to database
+        logger.info("Ingesting into database...")
+        await service.ingest_application_types(session, app_types)
+        await service.ingest_applications(session, apps)
+
+        logger.info(f"✓ Synced {len(app_types)} app types and {len(apps)} applications")
+
+        return {
+            "status": "sync_completed",
+            "message": f"Synced {len(app_types)} app types and {len(apps)} applications",
+            "app_types_count": len(app_types),
+            "applications_count": len(apps),
+        }
+
+    except Exception as e:
+        logger.error(f"Error syncing Cyperf applications: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to sync applications: {str(e)}",
+        )

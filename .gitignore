@@ -62,3 +62,8 @@ build/
 .coverage
 htmlcov/
 .hypothesis/
+
+# Data files and reference scripts
+backend/data/*.json
+apps_cyperf.py
+.frontend.pid

@@ -18,6 +18,8 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'NVD_Search' },
   { path: '/browse', label: 'All Cyperf CVE Strikes' },
   { path: '/ai-cves', label: 'Cyperf AI Strike' },
+  { path: '/cyperf-app-types', label: 'Cyperf App Types' },
+  { path: '/cyperf-apps', label: 'Cyperf Apps' },
   { path: '/what-is-cyperf', label: 'What is Cyperf' },
 ];
 

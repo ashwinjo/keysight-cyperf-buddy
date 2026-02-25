@@ -1,0 +1,102 @@
+/**
+ * Cyperf Application Types Page
+ *
+ * Displays all Cyperf application types fetched from the Controller.
+ * No pagination - displays all records in a single table.
+ */
+import { useCyperfApplicationTypes } from '../hooks/useAPI';
+
+export default function CyperfAppTypesPage() {
+  const { data: appTypes, isLoading, isError, error } = useCyperfApplicationTypes();
+
+  return (
+    <div className="space-y-8 animate-in">
+      <div>
+        <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
+          Cyperf App Types
+        </h1>
+        <p className="text-luxury-text-secondary tracking-tight">
+          Application types available in Cyperf for test scenario configuration
+        </p>
+      </div>
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="card-luxury flex items-center gap-3 text-luxury-text-secondary text-sm">
+          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-luxury-accent border-t-transparent" />
+          Loading application types...
+        </div>
+      )}
+
+      {/* Error state */}
+      {isError && (
+        <div className="card-luxury border border-red-700/40 space-y-2">
+          <p className="text-xs tracking-luxury uppercase text-red-400 font-semibold">
+            Error Loading Application Types
+          </p>
+          <p className="text-luxury-text-secondary text-sm">
+            {error instanceof Error ? error.message : 'An unexpected error occurred.'}
+          </p>
+        </div>
+      )}
+
+      {/* Stats */}
+      {!isLoading && !isError && (
+        <div className="card-luxury">
+          <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold mb-3">
+            Summary
+          </p>
+          <p className="text-lg font-semibold text-luxury-accent">
+            {appTypes?.length || 0} application types
+          </p>
+        </div>
+      )}
+
+      {/* Table */}
+      {!isLoading && !isError && appTypes && appTypes.length > 0 && (
+        <div className="overflow-x-auto rounded-lg border border-luxury-border">
+          <table className="min-w-full divide-y divide-luxury-border text-sm">
+            <thead className="bg-luxury-bg-subtle">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-luxury-text-secondary tracking-luxury uppercase">
+                  ID
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-luxury-text-secondary tracking-luxury uppercase">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-luxury-text-secondary tracking-luxury uppercase">
+                  Description
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-luxury-border bg-luxury-bg">
+              {appTypes.map((appType) => (
+                <tr key={appType.id} className="hover:bg-luxury-bg-subtle transition-colors">
+                  <td className="px-4 py-3 font-mono font-semibold text-luxury-accent text-xs">
+                    {appType.id}
+                  </td>
+                  <td className="px-4 py-3 text-luxury-text font-semibold">
+                    {appType.name}
+                  </td>
+                  <td className="px-4 py-3 text-luxury-text-secondary max-w-2xl">
+                    <p className="line-clamp-2">{appType.description || '—'}</p>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!isLoading && !isError && (!appTypes || appTypes.length === 0) && (
+        <div className="card-luxury text-center py-12 space-y-2">
+          <p className="text-luxury-text-secondary text-sm">No application types found.</p>
+          <p className="text-luxury-text-secondary text-xs">
+            Run admin sync endpoint to fetch application types from Cyperf.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -5,6 +5,8 @@ import SearchPage from './pages/SearchPage';
 import BrowsePage from './pages/BrowsePage';
 import BatchPage from './pages/BatchPage';
 import CyperfAiCvesPage from './pages/CyperfAiCvesPage';
+import CyperfAppTypesPage from './pages/CyperfAppTypesPage';
+import CyperfAppsPage from './pages/CyperfAppsPage';
 import WhatIsCyperfPage from './pages/WhatIsCyperfPage';
 import Navigation from './components/layout/Navigation';
 import StaleDataWarning from './components/layout/StaleDataWarning';
@@ -25,6 +27,8 @@ export default function App(): React.ReactNode {
               <Route path="/browse" element={<BrowsePage />} />
               <Route path="/batch" element={<BatchPage />} />
               <Route path="/ai-cves" element={<CyperfAiCvesPage />} />
+              <Route path="/cyperf-app-types" element={<CyperfAppTypesPage />} />
+              <Route path="/cyperf-apps" element={<CyperfAppsPage />} />
               <Route path="/what-is-cyperf" element={<WhatIsCyperfPage />} />
             </Routes>
           </main>
