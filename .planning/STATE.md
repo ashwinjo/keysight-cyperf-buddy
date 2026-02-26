@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
-**Last updated:** 2026-02-24
-**Session:** Phase 4.1 Plan 05 executed - E2E integration test, SMTP stubs, .env.example docs
+**Last updated:** 2026-02-26
+**Session:** Quick Task 8 executed - UI renaming, dropdown navigation, CyperfBuddy rebrand
 
 ---
 
@@ -181,6 +181,9 @@ None currently. Phases 1-3 complete and operational.
 | 3 | Implement AI-type strike ingestion with ai_cves table | 2026-02-24 | a8d837e | [3-implement-ai-type-strike-ingestion-with-](./quick/3-implement-ai-type-strike-ingestion-with-/) |
 | 4 | Rename navigation tabs and create Cyperf AI CVEs tab | 2026-02-24 | baf8ec2 | [4-rename-navigation-tabs-and-create-cyperf](./quick/4-rename-navigation-tabs-and-create-cyperf/) |
 | 5 | Implement AI CVE sync workflow and GET /api/ai-cves endpoint | 2026-02-24 | 71a27cd | [5-implement-ai-cve-sync-workflow-and-get-a](./quick/5-implement-ai-cve-sync-workflow-and-get-a/) |
+| 6 | Cyperf App Types and Apps pages with backend data | 2026-02-24 | — | — |
+| 7 | Dark theme refinement and column visibility | 2026-02-24 | — | — |
+| 8 | UI renaming and navigation restructuring | 2026-02-26 | 8001a2d | [8-ui-renaming-and-navigation-restructuring](./quick/8-ui-renaming-and-navigation-restructuring/) |
 
 ---
 
