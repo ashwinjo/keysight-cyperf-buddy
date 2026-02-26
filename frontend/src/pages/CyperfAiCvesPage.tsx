@@ -36,9 +36,6 @@ function AiCveTable({ data }: { data: AiCVEResponse[] }) {
             <th className="px-4 py-3 text-left text-xs font-semibold text-luxury-text-secondary tracking-luxury uppercase">
               AI Strike Name
             </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-luxury-text-secondary tracking-luxury uppercase">
-              Description
-            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-luxury-border bg-luxury-bg">
@@ -49,9 +46,6 @@ function AiCveTable({ data }: { data: AiCVEResponse[] }) {
               </td>
               <td className="px-4 py-3 text-luxury-text-secondary font-mono text-xs">
                 {entry.ai_strike_name ?? <span className="italic">—</span>}
-              </td>
-              <td className="px-4 py-3 text-luxury-text max-w-2xl">
-                <p className="line-clamp-2 leading-relaxed text-sm">{entry.description || '—'}</p>
               </td>
             </tr>
           ))}
@@ -87,7 +81,7 @@ export default function CyperfAiCvesPage() {
     <div className="space-y-8 animate-in">
       <div>
         <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
-          Cyperf AI Strike
+          Cyperf tested AI Strikes
         </h1>
         <p className="text-luxury-text-secondary tracking-tight">
           AI-generated attack strikes from Cyperf with URL-based references

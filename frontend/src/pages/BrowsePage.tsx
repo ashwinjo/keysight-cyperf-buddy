@@ -55,7 +55,7 @@ export default function BrowsePage() {
     <div className="space-y-8 animate-in">
       <div>
         <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
-          All Cyperf CVE Strikes
+          Cyperf tested CVE's Strikes
         </h1>
         <p className="text-luxury-text-secondary tracking-tight">
           All CVE-based attack strikes available in Cyperf for vulnerability testing
