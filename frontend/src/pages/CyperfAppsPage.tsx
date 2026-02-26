@@ -3,11 +3,24 @@
  *
  * Displays all Cyperf applications fetched from the Controller.
  * No pagination - displays all records in a single table.
+ * Client-side search filters by name or description (case-insensitive).
  */
+import { useState } from 'react';
 import { useCyperfApplications } from '../hooks/useAPI';
+import { Input } from '../components/ui/input';
 
 export default function CyperfAppsPage() {
   const { data: apps, isLoading, isError, error } = useCyperfApplications();
+  const [query, setQuery] = useState('');
+
+  const filtered = (apps ?? []).filter((app) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      app.name?.toLowerCase().includes(q) ||
+      app.description?.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-8 animate-in">
@@ -47,13 +60,28 @@ export default function CyperfAppsPage() {
             Summary
           </p>
           <p className="text-lg font-semibold text-luxury-accent">
-            {apps?.length || 0} applications
+            {query.trim()
+              ? `${filtered.length} of ${apps?.length || 0} applications`
+              : `${apps?.length || 0} applications`}
           </p>
         </div>
       )}
 
-      {/* Table */}
+      {/* Search input */}
       {!isLoading && !isError && apps && apps.length > 0 && (
+        <div className="flex items-center gap-3">
+          <Input
+            type="search"
+            placeholder="Filter by name or description..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+      )}
+
+      {/* Table */}
+      {!isLoading && !isError && apps && apps.length > 0 && filtered.length > 0 && (
         <div className="overflow-x-auto rounded-lg border border-luxury-border">
           <table className="min-w-full divide-y divide-luxury-border text-sm">
             <thead className="bg-luxury-bg-subtle">
@@ -70,7 +98,7 @@ export default function CyperfAppsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-luxury-border bg-luxury-bg">
-              {apps.map((app) => (
+              {filtered.map((app) => (
                 <tr key={app.id} className="hover:bg-luxury-bg-subtle transition-colors">
                   <td className="px-4 py-3 font-mono font-semibold text-luxury-accent text-xs">
                     {app.id}
@@ -88,7 +116,17 @@ export default function CyperfAppsPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* No search results (data exists but filter returns nothing) */}
+      {!isLoading && !isError && apps && apps.length > 0 && filtered.length === 0 && (
+        <div className="card-luxury text-center py-12 space-y-2">
+          <p className="text-luxury-text-secondary text-sm">No applications match your search.</p>
+          <p className="text-luxury-text-secondary text-xs">
+            Try a different name or description term.
+          </p>
+        </div>
+      )}
+
+      {/* Empty state (no data at all) */}
       {!isLoading && !isError && (!apps || apps.length === 0) && (
         <div className="card-luxury text-center py-12 space-y-2">
           <p className="text-luxury-text-secondary text-sm">No applications found.</p>
