@@ -24,7 +24,7 @@ class CyperfApplication(Base):
 
     __tablename__ = "cyperf_applications"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, index=True)
+    id: Mapped[str] = mapped_column(String(512), primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(512), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
