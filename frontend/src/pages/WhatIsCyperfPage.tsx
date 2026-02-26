@@ -8,15 +8,6 @@
 export default function WhatIsCyperfPage() {
   return (
     <div className="space-y-8 animate-in">
-      <div>
-        <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
-          What is Keysight CyPerf?
-        </h1>
-        <p className="text-luxury-text-secondary tracking-tight">
-          Cloud-native application and security test solution that validates performance and security efficacy across hybrid and multi-cloud networks
-        </p>
-      </div>
-
       {/* Getting Started & Resources - Prominent CTA Section at Top */}
       <div className="space-y-6">
         <div className="text-center space-y-3 pb-4 border-b border-luxury-border">
@@ -121,6 +112,15 @@ export default function WhatIsCyperfPage() {
             </ul>
           </div>
         </div>
+      </div>
+
+      <div>
+        <h1 className="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">
+          What is Keysight CyPerf?
+        </h1>
+        <p className="text-luxury-text-secondary tracking-tight">
+          Cloud-native application and security test solution that validates performance and security efficacy across hybrid and multi-cloud networks
+        </p>
       </div>
 
       {/* Overview card */}
