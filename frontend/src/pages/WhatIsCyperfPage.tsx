@@ -17,6 +17,112 @@ export default function WhatIsCyperfPage() {
         </p>
       </div>
 
+      {/* Getting Started & Resources - Prominent CTA Section at Top */}
+      <div className="space-y-6">
+        <div className="text-center space-y-3 pb-4 border-b border-luxury-border">
+          <h2 className="text-3xl font-display font-bold text-luxury-accent tracking-luxury">
+            Ready to Get Started?
+          </h2>
+          <p className="text-luxury-text-secondary text-lg">
+            Explore official resources, deployment options, and pre-built configurations
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Official Resources Card */}
+          <div className="card-luxury border-2 border-luxury-accent/30 hover:border-luxury-accent transition-all p-6 space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-2xl font-display font-bold text-luxury-accent tracking-luxury">
+                📚 Official Resources
+              </h3>
+              <p className="text-sm text-luxury-text-secondary">
+                Start with Keysight's official product information and community edition
+              </p>
+            </div>
+            <ul className="space-y-3">
+              <li>
+                <a
+                  href="https://www.keysight.com/us/en/products/network-test/cloud-test/cyperf.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
+                >
+                  → CyPerf Official Product Page
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.cyperf.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
+                >
+                  → CyPerf Community Edition
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Deployment & Integration Card */}
+          <div className="card-luxury border-2 border-luxury-accent/30 hover:border-luxury-accent transition-all p-6 space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-2xl font-display font-bold text-luxury-accent tracking-luxury">
+                🚀 Deployment & Integration
+              </h3>
+              <p className="text-sm text-luxury-text-secondary">
+                Deploy CyPerf and integrate with your infrastructure
+              </p>
+            </div>
+            <ul className="space-y-3">
+              <li>
+                <a
+                  href="https://github.com/Keysight/cyperf/tree/main/deployment"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
+                >
+                  → CyPerf Deployment Options
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/Keysight/cyperf-api-wrapper"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
+                >
+                  → CyPerf Python SDK
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Performance Benchmarks Card */}
+          <div className="card-luxury border-2 border-luxury-accent/30 hover:border-luxury-accent transition-all p-6 space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-2xl font-display font-bold text-luxury-accent tracking-luxury">
+                ⚡ Pre-Built Configurations
+              </h3>
+              <p className="text-sm text-luxury-text-secondary">
+                Leverage tested, ready-to-use performance benchmarks
+              </p>
+            </div>
+            <ul className="space-y-3">
+              <li>
+                <a
+                  href="https://github.com/Keysight/cyperf/tree/main/CyPerf-Performance-Benchmark"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
+                >
+                  → CyPerf Performance Benchmarks
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Overview card */}
       <div className="card-luxury space-y-5">
         <h2 className="text-xl font-display font-bold text-luxury-accent tracking-luxury">
@@ -153,111 +259,6 @@ export default function WhatIsCyperfPage() {
         </div>
       </div>
 
-      {/* Getting Started & Resources - Prominent CTA Section */}
-      <div className="space-y-6">
-        <div className="text-center space-y-3 pb-4 border-b border-luxury-border">
-          <h2 className="text-3xl font-display font-bold text-luxury-accent tracking-luxury">
-            Ready to Get Started?
-          </h2>
-          <p className="text-luxury-text-secondary text-lg">
-            Explore official resources, deployment options, and pre-built configurations
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Official Resources Card */}
-          <div className="card-luxury border-2 border-luxury-accent/30 hover:border-luxury-accent transition-all p-6 space-y-4">
-            <div className="space-y-2">
-              <h3 className="text-2xl font-display font-bold text-luxury-accent tracking-luxury">
-                📚 Official Resources
-              </h3>
-              <p className="text-sm text-luxury-text-secondary">
-                Start with Keysight's official product information and community edition
-              </p>
-            </div>
-            <ul className="space-y-3">
-              <li>
-                <a
-                  href="https://www.keysight.com/us/en/products/network-test/cloud-test/cyperf.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
-                >
-                  → CyPerf Official Product Page
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://www.cyperf.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
-                >
-                  → CyPerf Community Edition
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Deployment & Integration Card */}
-          <div className="card-luxury border-2 border-luxury-accent/30 hover:border-luxury-accent transition-all p-6 space-y-4">
-            <div className="space-y-2">
-              <h3 className="text-2xl font-display font-bold text-luxury-accent tracking-luxury">
-                🚀 Deployment & Integration
-              </h3>
-              <p className="text-sm text-luxury-text-secondary">
-                Deploy CyPerf and integrate with your infrastructure
-              </p>
-            </div>
-            <ul className="space-y-3">
-              <li>
-                <a
-                  href="https://github.com/Keysight/cyperf/tree/main/deployment"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
-                >
-                  → CyPerf Deployment Options
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://github.com/Keysight/cyperf-api-wrapper"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
-                >
-                  → CyPerf Python SDK
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Performance Benchmarks Card */}
-          <div className="card-luxury border-2 border-luxury-accent/30 hover:border-luxury-accent transition-all p-6 space-y-4">
-            <div className="space-y-2">
-              <h3 className="text-2xl font-display font-bold text-luxury-accent tracking-luxury">
-                ⚡ Pre-Built Configurations
-              </h3>
-              <p className="text-sm text-luxury-text-secondary">
-                Leverage tested, ready-to-use performance benchmarks
-              </p>
-            </div>
-            <ul className="space-y-3">
-              <li>
-                <a
-                  href="https://github.com/Keysight/cyperf/tree/main/CyPerf-Performance-Benchmark"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-luxury-accent hover:text-luxury-accent-alt transition-colors font-semibold text-base block hover:translate-x-1 transition-transform"
-                >
-                  → CyPerf Performance Benchmarks
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
