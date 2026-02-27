@@ -13,6 +13,7 @@ from config import Settings
 from db.ai_cves import AICve
 from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
 from db.sync_metadata import SyncMetadata
+from db.system_config import SystemConfig
 from services.cyperf_service import (
     AIStrikeRecord,
     CyperfAPIError,
@@ -33,14 +34,23 @@ class SyncError(Exception):
 async def perform_sync(session: AsyncSession, settings: Settings) -> None:
     """Orchestrate complete Cyperf sync cycle with retry and graceful degradation.
 
+    Endpoint is determined at call time from system_config, with fallback to the
+    environment variable. This ensures that dynamic reconfiguration (via
+    POST /admin/config/cyperf-endpoint) is picked up without restarting the process.
+
+    Resolution order:
+    1. ``system_config`` table (``cyperf_endpoint`` key) — runtime-configurable
+    2. ``settings.cyperf_controller_ip`` (from ``CYPERF_CONTROLLER_IP`` env var) — fallback
+
     Handles the full sync lifecycle:
-    1. Record sync attempt start
-    2. Fetch CVE→Strike mappings from Cyperf with retry logic (splits AI vs non-AI strikes)
-    3. Atomic full-replace: delete all cverf_cve_strike_mappings and ai_cves, insert fresh
-    4. Write JSON artifacts:
+    1. Resolve endpoint from system_config (with env-var fallback)
+    2. Record sync attempt start
+    3. Fetch CVE→Strike mappings from Cyperf with retry logic (splits AI vs non-AI strikes)
+    4. Atomic full-replace: delete all cverf_cve_strike_mappings and ai_cves, insert fresh
+    5. Write JSON artifacts:
        - ./data/cve_strikes.json for non-AI CVE→Strike mappings
        - ./data/ai_cves.json for AI-type strikes with synthetic NoCVE_cyperf IDs
-    5. Record completion (success or failure)
+    6. Record completion (success or failure)
 
     On any Cyperf failure:
     - Retries immediately once, then after 5 second delay once more (3 total attempts)
@@ -64,12 +74,39 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
     Note:
         This function catches all errors and records them in sync_metadata.
         It never raises for Cyperf or database errors (graceful degradation).
+        Endpoint determined from system config, with fallback to environment variable.
     """
     start_time = time.time()
     attempt_count = 0
     last_error: str | None = None
 
     logger.info("Starting Cyperf sync operation...")
+
+    # Resolve endpoint: system_config first, fallback to env var
+    controller_ip: str = ""
+    endpoint_source: str = "unknown"
+    try:
+        config_endpoint = await SystemConfig.get_value(session, "cyperf_endpoint")
+        if config_endpoint and config_endpoint.strip():
+            controller_ip = config_endpoint.strip()
+            endpoint_source = "config"
+        else:
+            controller_ip = settings.cyperf_controller_ip or ""
+            endpoint_source = "environment"
+    except Exception as config_err:
+        logger.warning(
+            "Failed to read cyperf_endpoint from system_config (%s); "
+            "falling back to environment variable",
+            config_err,
+        )
+        controller_ip = settings.cyperf_controller_ip or ""
+        endpoint_source = "environment"
+
+    logger.info(
+        "Using endpoint from [%s]: %s",
+        endpoint_source,
+        controller_ip if controller_ip else "<not set>",
+    )
 
     try:
         # Record sync attempt start
@@ -95,9 +132,9 @@ async def perform_sync(session: AsyncSession, settings: Settings) -> None:
         try:
             logger.info(f"Cyperf sync attempt {attempt_number}/3...")
 
-            # Initialize Cyperf service
+            # Initialize Cyperf service with dynamically resolved endpoint
             cyperf_service = CyperfService(
-                controller_ip=settings.cyperf_controller_ip,
+                controller_ip=controller_ip,
                 username=settings.cyperf_username,
                 password=settings.cyperf_password,
             )
