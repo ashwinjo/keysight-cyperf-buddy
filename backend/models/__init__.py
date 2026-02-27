@@ -1,9 +1,10 @@
 """Pydantic models for request/response schemas."""
 
+import re
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # Import CVE API models
 from .cve import CVEDetail, CVELatestResponse, CVESearchResponse, ErrorResponse
@@ -91,6 +92,79 @@ class HealthResponse(BaseModel):
     error: str | None = Field(None, description="Error message if status is not ok")
 
 
+class EndpointConfigRequest(BaseModel):
+    """Request to update the Keysight CyPerf Controller endpoint."""
+
+    endpoint: str = Field(
+        ...,
+        description="Keysight CyPerf Controller endpoint (DNS name or IP address)",
+        examples=["cyperf.example.com", "192.168.1.100"],
+    )
+
+    @field_validator("endpoint")
+    @classmethod
+    def validate_endpoint_format(cls, v: str) -> str:
+        """Validate endpoint is non-empty and a valid DNS name or IP address.
+
+        Strips http:// or https:// prefix if present.
+        Rejects endpoints that embed credentials (@ character).
+        Accepts IPv4, IPv6 (bracket notation), domain names, and bare IPs.
+
+        Args:
+            v: Raw endpoint string from the request body.
+
+        Returns:
+            Cleaned endpoint string with protocol prefix removed.
+
+        Raises:
+            ValueError: If endpoint is empty, contains credentials, or has invalid chars.
+        """
+        if not v or not v.strip():
+            raise ValueError("Endpoint cannot be empty")
+
+        # Remove protocol prefix if present (caller may include it)
+        v = v.replace("https://", "").replace("http://", "").strip()
+
+        if not v:
+            raise ValueError("Endpoint cannot be empty after stripping protocol prefix")
+
+        # Reject credentials embedded in URL (user:pass@host pattern)
+        if "@" in v:
+            raise ValueError(
+                "Endpoint must not contain credentials; provide hostname or IP address only"
+            )
+
+        # Allow IPv4, IPv6 bracket notation [::1], domain names, optional port suffix
+        # Pattern: alphanumeric, dots, hyphens, underscores, brackets (IPv6), colons (port/IPv6)
+        if not re.match(r"^[a-zA-Z0-9._\-\[\]:]+$", v):
+            raise ValueError(
+                "Invalid endpoint format — only alphanumeric characters, dots, "
+                "hyphens, underscores, brackets, and colons are allowed"
+            )
+
+        return v
+
+
+class EndpointConfigResponse(BaseModel):
+    """Response containing the current CyPerf endpoint configuration."""
+
+    endpoint: str = Field(..., description="Current CyPerf Controller endpoint")
+    last_validated_at: datetime | None = Field(
+        None, description="ISO 8601 timestamp of last successful connectivity validation"
+    )
+    is_valid: bool = Field(
+        False, description="Whether the endpoint was reachable at last validation"
+    )
+    error_message: str | None = Field(
+        None, description="Human-readable error from last failed validation attempt"
+    )
+
+    class Config:
+        """Pydantic config: allow ORM-mode attribute access."""
+
+        from_attributes = True
+
+
 __all__ = [
     "CVEResponse",
     "CyperfMappingResponse",
@@ -100,4 +174,6 @@ __all__ = [
     "CVESearchResponse",
     "CVELatestResponse",
     "ErrorResponse",
+    "EndpointConfigRequest",
+    "EndpointConfigResponse",
 ]
