@@ -7,7 +7,7 @@
  */
 import { useState } from 'react';
 import { useCyperfApplications } from '../hooks/useAPI';
-import { Input } from '../components/ui/input';
+import { SearchBox } from '../components/shared/SearchBox';
 
 export default function CyperfAppsPage() {
   const { data: apps, isLoading, isError, error } = useCyperfApplications();
@@ -53,32 +53,22 @@ export default function CyperfAppsPage() {
         </div>
       )}
 
-      {/* Stats */}
-      {!isLoading && !isError && (
-        <div className="card-luxury">
-          <p className="text-xs tracking-luxury uppercase text-luxury-accent/70 font-semibold mb-3">
-            Summary
-          </p>
-          <p className="text-lg font-semibold text-luxury-accent">
-            {query.trim()
-              ? `${filtered.length} of ${apps?.length || 0} applications`
-              : `${apps?.length || 0} applications`}
-          </p>
-        </div>
-      )}
-
-      {/* Search input */}
-      {!isLoading && !isError && apps && apps.length > 0 && (
-        <div className="flex items-center gap-3">
-          <Input
-            type="search"
-            placeholder="Filter by name or description..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="max-w-md"
-          />
-        </div>
-      )}
+      {/* Search with stats below input */}
+      <SearchBox
+        label="Filter Applications"
+        placeholder="Filter by name or description..."
+        value={query}
+        onChange={setQuery}
+        stats={
+          !isLoading && !isError ? (
+            <p className="text-sm font-semibold text-luxury-accent">
+              {query.trim()
+                ? `${filtered.length} of ${apps?.length || 0} applications`
+                : `${apps?.length || 0} applications`}
+            </p>
+          ) : undefined
+        }
+      />
 
       {/* Table */}
       {!isLoading && !isError && apps && apps.length > 0 && filtered.length > 0 && (

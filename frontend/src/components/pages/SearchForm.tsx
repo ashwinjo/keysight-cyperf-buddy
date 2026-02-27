@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SearchBox } from '../shared/SearchBox';
 
 interface SearchFormProps {
   onSearch: (cveId: string) => void;
@@ -15,8 +16,7 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
     return cveRegex.test(id.trim());
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     const trimmed = input.trim().toUpperCase();
 
     if (!trimmed) {
@@ -34,32 +34,18 @@ export default function SearchForm({ onSearch, isLoading }: SearchFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card-luxury">
-      <div className="flex gap-4">
-        <input
-          type="text"
-          placeholder="e.g., CVE-2024-1234"
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            if (error) setError('');
-          }}
-          className="input-luxury flex-1"
-          disabled={isLoading}
-        />
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="btn-luxury-primary disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? 'Searching...' : 'Search'}
-        </button>
-      </div>
-      {error && (
-        <p className="mt-4 text-sm text-red-400 font-medium tracking-tight px-4 py-3 bg-red-900/20 border border-red-900/50 rounded">
-          ⚠ {error}
-        </p>
-      )}
-    </form>
+    <SearchBox
+      label="Search CVEs"
+      placeholder="e.g., CVE-2024-1234"
+      value={input}
+      onChange={(v) => {
+        setInput(v);
+        if (error) setError('');
+      }}
+      onSubmit={handleSubmit}
+      isLoading={isLoading}
+      submitLabel="Search"
+      error={error}
+    />
   );
 }
