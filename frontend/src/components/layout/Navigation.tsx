@@ -81,7 +81,7 @@ export default function Navigation() {
   const fetchEndpointConfig = useCallback(async () => {
     try {
       const res = await axios.get<{ endpoint: string; is_valid: boolean }>(
-        '/api/admin/config/cyperf-endpoint'
+        '/admin/config/cyperf-endpoint'
       );
       // Backend always returns HTTP 200 even if no endpoint configured (empty string)
       setEndpoint(res.data.endpoint || undefined);

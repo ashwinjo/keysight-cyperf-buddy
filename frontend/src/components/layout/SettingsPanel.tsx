@@ -69,7 +69,7 @@ export function SettingsPanel({
     const toastId = toast.loading("Validating endpoint...");
 
     try {
-      await axios.post("/api/admin/config/cyperf-endpoint", {
+      await axios.post("/admin/config/cyperf-endpoint", {
         endpoint: trimmed,
       });
 

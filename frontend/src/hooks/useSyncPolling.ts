@@ -80,7 +80,7 @@ export function useSyncPolling(
     }
 
     try {
-      const res = await axios.get<SyncStatus>("/api/admin/sync-status");
+      const res = await axios.get<SyncStatus>("/admin/sync-status");
       const data = res.data;
       setSyncStatus(data);
       setError(null);

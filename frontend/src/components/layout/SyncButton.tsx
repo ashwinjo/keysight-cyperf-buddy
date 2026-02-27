@@ -1,7 +1,7 @@
 /**
  * SyncButton — navbar component for triggering manual CyPerf data sync.
  *
- * Calls POST /api/admin/sync-cyperf-now and displays status feedback:
+ * Calls POST /admin/sync-cyperf-now and displays status feedback:
  *   idle    → "Sync Data" (outline button)
  *   loading → spinning loader + "Syncing..." (polling active via useSyncPolling)
  *   success → green checkmark + "Synced" (resets after 3s)
@@ -12,7 +12,7 @@
  * Displays last sync timestamp inline when provided (idle state only).
  *
  * Polling lifecycle:
- *   1. User clicks → POST /api/admin/sync-cyperf-now
+ *   1. User clicks → POST /admin/sync-cyperf-now
  *   2. If response.status === "sync_queued": start useSyncPolling
  *   3. Polling hits terminal state (success/failed) → show toast, update UI
  *   4. If response.status === "sync_completed": immediate success (no polling needed)
@@ -122,7 +122,7 @@ export function SyncButton({
         status: "sync_queued" | "sync_completed";
         message: string;
         job_id?: string;
-      }>("/api/admin/sync-cyperf-now");
+      }>("/admin/sync-cyperf-now");
 
       const data = res.data;
 
