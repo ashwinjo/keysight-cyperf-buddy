@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-27
-**Session:** Quick Task 10-04 complete - useSyncPolling hook + sonner toasts + ErrorBoundary (3 commits: 4e8c07a, 3e74204, 086b15f)
+**Session:** Quick Task 10-05 complete - testing + E2E plan + docs (2 commits: d039fb0, 8594dfa). Phase 10 complete (5/5 plans).
 
 ---
 
@@ -161,6 +161,10 @@ Phase 1 (Setup) ✓
 - [Quick Task 10-04]: SyncStatus fields use snake_case (cves_extracted, error_message) — matches actual backend JSON; plan template used camelCase
 - [Quick Task 10-04]: loadingToastRef pattern for dismiss-and-replace — toast.promise not used because sync may or may not poll depending on backend response
 - [Quick Task 10-04]: Dual ErrorBoundary in Navigation (controls + modal) — modal fallback=<div /> so SettingsPanel crash is invisible; controls boundary shows error strip
+- [Quick Task 10-05]: Vitest chosen over Jest for frontend tests — Vite project uses ESM natively; Vitest has native Vite plugin integration with no babel transform
+- [Quick Task 10-05]: vi.advanceTimersByTimeAsync() for hook timer tests — runAllTimersAsync() exhausts maxDuration causing unexpected state transitions
+- [Quick Task 10-05]: Real axios.isAxiosError kept in mock — mocking it as vi.fn() breaks the type contract; test errors use isAxiosError: true property
+- [Quick Task 10-05]: test_cyperf_endpoint_integration.py provides multi-call integrated workflow tests that span both test_admin_config.py and test_manual_sync_integration.py domains
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -207,6 +211,7 @@ None currently. Phases 1-3 complete and operational.
 | 10b | Dynamic endpoint sync triggering + integration tests (Wave 2) | 2026-02-27 | 9a3c7e6 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 | 10c | Frontend SyncButton + SettingsPanel navbar integration (Wave 3) | 2026-02-27 | 01f6bef | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 | 10d | useSyncPolling hook + sonner toasts + ErrorBoundary (Wave 3 Part 2) | 2026-02-27 | 086b15f | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
+| 10e | Testing, E2E plan, security review, documentation (Wave 4) | 2026-02-27 | 8594dfa | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 
 ---
 
