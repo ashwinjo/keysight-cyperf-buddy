@@ -1,7 +1,9 @@
 """Admin endpoints for Cyperf sync status and manual triggering."""
 
 import logging
+import os
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,13 +12,90 @@ from config import get_settings
 from database import get_db
 from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
 from db.sync_metadata import SyncMetadata
-from models import SyncStatusResponse
+from db.system_config import SystemConfig
+from dependencies import get_redis
+from models import EndpointConfigResponse, SyncStatusResponse
 from scheduler import trigger_cyperf_sync_now
 from services.sync_service import perform_sync
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+# Redis cache key for the CyPerf endpoint value
+_CYPERF_ENDPOINT_CACHE_KEY = "cyperf:endpoint"
+# TTL: 1 hour — long-lived config value changes rarely
+_ENDPOINT_CACHE_TTL_SECONDS = 3600
+
+
+@router.get("/config/cyperf-endpoint")
+async def get_cyperf_endpoint(
+    session: AsyncSession = Depends(get_db),
+) -> EndpointConfigResponse:
+    """Get the current Keysight CyPerf Controller endpoint configuration.
+
+    Resolution priority:
+    1. Redis cache key ``cyperf:endpoint`` (TTL = 1 hour)
+    2. ``system_config`` table, config_key = ``cyperf_endpoint``
+    3. Environment variable ``CYPERF_CONTROLLER_IP``
+    4. Empty string (degraded response — no configuration found)
+
+    If a database value is found and cache is unavailable, the endpoint is returned
+    directly from the database without populating cache (graceful degradation).
+
+    Returns:
+        EndpointConfigResponse — always HTTP 200, even if degraded.
+    """
+    # Attempt cache lookup first (optional — skip on Redis failure)
+    cache: aioredis.Redis | None = None
+    try:
+        cache = await get_redis()
+        cached_endpoint = await cache.get(_CYPERF_ENDPOINT_CACHE_KEY)
+        if cached_endpoint:
+            logger.debug("CyPerf endpoint served from Redis cache")
+            return EndpointConfigResponse(endpoint=cached_endpoint, is_valid=True)
+    except Exception as redis_exc:
+        logger.warning("Redis unavailable for endpoint GET — skipping cache: %s", redis_exc)
+        cache = None
+
+    # Database lookup
+    endpoint: str = ""
+    try:
+        db_value = await SystemConfig.get_value(session, "cyperf_endpoint")
+        if db_value:
+            endpoint = db_value
+            logger.debug("CyPerf endpoint retrieved from database: %s", endpoint)
+
+            # Populate cache for subsequent requests (best-effort)
+            if cache is not None:
+                try:
+                    await cache.set(
+                        _CYPERF_ENDPOINT_CACHE_KEY, endpoint, ex=_ENDPOINT_CACHE_TTL_SECONDS
+                    )
+                except Exception as cache_set_exc:
+                    logger.warning(
+                        "Failed to populate Redis cache after DB lookup: %s", cache_set_exc
+                    )
+
+    except Exception as db_exc:
+        logger.error("Database unavailable for CyPerf endpoint GET: %s", db_exc)
+
+    # Fallback: environment variable (backwards compatibility)
+    if not endpoint:
+        env_value = os.getenv("CYPERF_CONTROLLER_IP", "")
+        if env_value:
+            endpoint = env_value
+            logger.info("CyPerf endpoint served from CYPERF_CONTROLLER_IP env var: %s", endpoint)
+
+    if not endpoint:
+        logger.warning("No CyPerf endpoint configured (database empty, env var not set)")
+
+    return EndpointConfigResponse(
+        endpoint=endpoint,
+        is_valid=False,  # Validation status unknown for GET — POST validates and sets True
+        last_validated_at=None,
+        error_message=None,
+    )
 
 
 @router.get("/sync-status")

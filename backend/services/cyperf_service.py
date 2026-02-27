@@ -3,11 +3,13 @@
 Uses the official cyperf-api-wrapper Python client (ApplicationResourcesApi)
 to fetch Strike data and extract CVE→Strike mappings via paginated batching.
 
-No direct HTTP calls — all Cyperf communication goes through cyperf.ApiClient.
+No direct HTTP calls for sync — all Cyperf communication goes through cyperf.ApiClient.
+Connectivity validation for the admin config endpoint uses httpx with a 5-second timeout.
 """
 
 import json
 import logging
+import socket
 import uuid
 from dataclasses import dataclass
 
@@ -96,6 +98,77 @@ class CyperfAPIError(Exception):
     """Raised when Cyperf API returns an error (auth/permission/HTTP failures)."""
 
     pass
+
+
+async def validate_endpoint_connectivity(endpoint: str) -> tuple[bool, str]:
+    """Check whether a Keysight CyPerf Controller endpoint is reachable.
+
+    Attempts a GET request to ``https://{endpoint}/api/v2/profiles`` with a
+    5-second timeout.  SSL certificate errors are treated as a reachable-but-
+    misconfigured signal (returns True) because CyPerf ships with a self-signed
+    certificate by default.
+
+    The function never raises — all failures are captured and returned as
+    ``(False, human_readable_error_message)``.
+
+    Args:
+        endpoint: Hostname or IP of the CyPerf Controller, without protocol prefix.
+                  Example: ``"cyperf.example.com"`` or ``"192.168.1.100"``.
+
+    Returns:
+        Tuple of:
+            - ``is_valid`` (bool): True if the endpoint is reachable.
+            - ``error_message`` (str): Empty string on success; human-readable
+              reason on failure.
+    """
+    try:
+        import httpx
+    except ImportError:
+        logger.error("httpx is not installed — cannot validate endpoint connectivity")
+        return False, "Server configuration error: httpx library not available"
+
+    url = f"https://{endpoint}/api/v2/profiles"
+    logger.info("Validating CyPerf endpoint connectivity: %s", url)
+
+    try:
+        async with httpx.AsyncClient(verify=False, timeout=5.0) as client:  # noqa: S501
+            response = await client.get(url)
+
+        # Any HTTP response (200, 401, 403, 404, 500) means the host is reachable
+        logger.info("CyPerf endpoint %s responded with HTTP %d", endpoint, response.status_code)
+        return True, ""
+
+    except httpx.ConnectTimeout:
+        msg = "Endpoint unreachable (connection timeout after 5 seconds)"
+        logger.warning("Connectivity check timed out for %s", endpoint)
+        return False, msg
+
+    except httpx.ReadTimeout:
+        msg = "Endpoint unreachable (read timeout after 5 seconds)"
+        logger.warning("Connectivity check read-timeout for %s", endpoint)
+        return False, msg
+
+    except httpx.ConnectError as exc:
+        # Covers refused connections and DNS resolution failures
+        err_lower = str(exc).lower()
+        if "name or service not known" in err_lower or "nodename nor servname" in err_lower:
+            msg = f"DNS resolution failed for endpoint '{endpoint}'"
+        elif "connection refused" in err_lower:
+            msg = f"Connection refused by endpoint '{endpoint}'"
+        else:
+            msg = f"Cannot connect to endpoint '{endpoint}': {exc}"
+        logger.warning("Connectivity check connect-error for %s: %s", endpoint, exc)
+        return False, msg
+
+    except socket.gaierror:
+        msg = f"DNS resolution failed for endpoint '{endpoint}'"
+        logger.warning("DNS resolution failed for %s", endpoint)
+        return False, msg
+
+    except Exception as exc:
+        msg = f"Unexpected error validating endpoint '{endpoint}': {type(exc).__name__}"
+        logger.error("Unexpected connectivity check error for %s: %s", endpoint, exc)
+        return False, msg
 
 
 class CyperfService:
