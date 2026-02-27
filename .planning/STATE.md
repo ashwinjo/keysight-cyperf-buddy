@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-27
-**Session:** Quick Task 10-01 complete - Dynamic CyPerf Endpoint + system_config backend (4 commits: fdd5ec6, e583e29, da99d53, 9ecb5c9)
+**Session:** Quick Task 10-02 complete - Sync triggering and backend integration (3 commits: 4efdbb5, 991d68d, 9a3c7e6)
 
 ---
 
@@ -148,6 +148,10 @@ Phase 1 (Setup) ✓
 - [Quick Task 10-01]: SSL verification disabled for connectivity check (CyPerf self-signed cert, pre-existing pattern in CyperfService)
 - [Quick Task 10-01]: models/ package (not models.py) is the active models module — models.py is a legacy artifact shadowed by the package directory
 - [Quick Task 10-01]: GET endpoint returns is_valid=False — validation status is only authoritative after POST; GET only reports current stored value
+- [Quick Task 10-02]: perform_sync resolves controller_ip from SystemConfig.get_value at call time — dynamic reconfiguration picked up without process restart
+- [Quick Task 10-02]: POST /admin/sync-cyperf-now accepts env var as valid endpoint source if system_config is empty — backwards compatibility for env-var users
+- [Quick Task 10-02]: UUID job_id per manual trigger — prevents replace_existing conflicts with concurrent manual calls and the recurring 02:00 UTC job
+- [Quick Task 10-02]: _MinimalApp stub passed as app arg to sync_cyperf_job in manual trigger — sync_cyperf_job ignores app arg, so no real FastAPI app needed
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -190,7 +194,8 @@ None currently. Phases 1-3 complete and operational.
 | 7 | Dark theme refinement and column visibility | 2026-02-24 | — | — |
 | 8 | UI renaming and navigation restructuring | 2026-02-26 | 8001a2d | [8-ui-renaming-and-navigation-restructuring](./quick/8-ui-renaming-and-navigation-restructuring/) |
 | 9 | Add search box in Apps and App Types sections | 2026-02-26 | 1299e69 | [9-add-a-search-box-in-the-apps-as-well-as-](./quick/9-add-a-search-box-in-the-apps-as-well-as-/) |
-| 10 | Dynamic CyPerf endpoint config + backend API | 2026-02-27 | 9ecb5c9 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
+| 10 | Dynamic CyPerf endpoint config + backend API (Wave 1) | 2026-02-27 | 9ecb5c9 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
+| 10b | Dynamic endpoint sync triggering + integration tests (Wave 2) | 2026-02-27 | 9a3c7e6 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 
 ---
 
