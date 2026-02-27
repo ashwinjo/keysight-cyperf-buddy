@@ -421,10 +421,76 @@ sqlite3 cyperf_cve.db "SELECT * FROM sync_metadata ORDER BY last_run_at DESC LIM
 | Method | Path | Purpose | Response |
 |--------|------|---------|----------|
 | `GET` | `/admin/sync-status` | Check last sync | `SyncStatusResponse` |
-| `POST` | `/admin/sync-cyperf` | Trigger manual sync | `{"status": "sync_triggered"}` |
+| `POST` | `/admin/sync-cyperf-now` | Trigger immediate manual sync | `{"status": "sync_queued", "job_id": "..."}` |
+| `GET` | `/admin/config/cyperf-endpoint` | Get current CyPerf Controller endpoint | `EndpointConfigResponse` |
+| `POST` | `/admin/config/cyperf-endpoint` | Set + validate CyPerf Controller endpoint | `EndpointConfigResponse` |
 | `GET` | `/cves/{cve_id}` | Get CVE details | `CVEResponse` |
 | `GET` | `/cves?testable=true` | List testable CVEs | `CVEListResponse` |
 | `GET` | `/health` | Health check | `{"status": "ok"}` |
+
+### Dynamic Endpoint Configuration (Phase 10)
+
+The CyPerf Controller endpoint can be configured at runtime via the API — no restart
+required. The endpoint is validated for connectivity before being saved.
+
+**Endpoint resolution priority (highest to lowest):**
+1. `system_config` table (set via POST /admin/config/cyperf-endpoint)
+2. `CYPERF_CONTROLLER_IP` environment variable (backwards-compatible fallback)
+3. Empty string (degraded response — sync will fail if triggered)
+
+**Get current endpoint:**
+
+```bash
+curl -X GET http://localhost:8000/admin/config/cyperf-endpoint | jq .
+# Response:
+# {
+#   "endpoint": "cyperf.example.com",
+#   "is_valid": false,
+#   "last_validated_at": null,
+#   "error_message": null
+# }
+```
+
+**Set and validate endpoint:**
+
+```bash
+curl -X POST http://localhost:8000/admin/config/cyperf-endpoint \
+  -H "Content-Type: application/json" \
+  -d '{"endpoint": "cyperf.example.com"}' | jq .
+# Response (success):
+# {
+#   "endpoint": "cyperf.example.com",
+#   "is_valid": true,
+#   "last_validated_at": "2026-02-27T03:00:00Z",
+#   "error_message": null
+# }
+# Response (failure — unreachable):
+# HTTP 400
+# { "detail": "Endpoint unreachable (connection timeout after 5 seconds)" }
+```
+
+**Trigger immediate sync:**
+
+```bash
+curl -X POST http://localhost:8000/admin/sync-cyperf-now | jq .
+# Response (scheduler path):
+# {
+#   "status": "sync_queued",
+#   "job_id": "manual_sync_<uuid>",
+#   "endpoint": "cyperf.example.com",
+#   "message": "Manual sync queued using endpoint: cyperf.example.com"
+# }
+```
+
+**Input validation rules:**
+
+| Rule | Behaviour |
+|------|-----------|
+| Empty string | HTTP 422 (Pydantic rejects before route handler) |
+| `http://` or `https://` prefix | Stripped automatically, bare hostname saved |
+| Embedded credentials (`user:pass@host`) | HTTP 422 (@ character rejected) |
+| Invalid characters | HTTP 422 (only `[a-zA-Z0-9._\-\[\]:]` allowed) |
+| Unreachable endpoint | HTTP 400 with descriptive reason |
 
 ### Response Models
 
@@ -486,8 +552,16 @@ sqlite3 cyperf_cve.db ".schema cyperf_supported_cves"
 # View logs
 docker logs -f cyperf-api | grep cyperf
 
-# Trigger sync
-curl -X POST http://localhost:8000/admin/sync-cyperf
+# Set CyPerf endpoint (validates connectivity before saving)
+curl -X POST http://localhost:8000/admin/config/cyperf-endpoint \
+  -H "Content-Type: application/json" \
+  -d '{"endpoint": "cyperf.example.com"}'
+
+# Get current CyPerf endpoint config
+curl http://localhost:8000/admin/config/cyperf-endpoint | jq .
+
+# Trigger immediate sync (queues via scheduler, falls back to direct if unavailable)
+curl -X POST http://localhost:8000/admin/sync-cyperf-now | jq .
 
 # Check status
 curl http://localhost:8000/admin/sync-status | jq .
