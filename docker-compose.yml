@@ -46,7 +46,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://cyperf_dev:cyperf_dev_password@postgres:5432/cyperf_cve_dev
       REDIS_URL: redis://redis:6379/0
-      CYPERF_CONTROLLER_IP: 52.32.20.150
+      CYPERF_CONTROLLER_IP: ec2-44-255-23-243.us-west-2.compute.amazonaws.com
       CYPERF_USERNAME: admin
       CYPERF_PASSWORD: CyPerf&Keysight#1
       CYPERF_SYNC_INTERVAL_HOURS: 24
