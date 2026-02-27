@@ -3,28 +3,25 @@ version: "3.9"
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: cyperf_db_dev
+    container_name: cyperf_db
     environment:
-      POSTGRES_USER: cyperf_dev
-      POSTGRES_PASSWORD: cyperf_dev_password
-      POSTGRES_DB: cyperf_cve_dev
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: cyperf
+      POSTGRES_PASSWORD: cyperf_password
+      POSTGRES_DB: cyperf_cve
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cyperf_dev"]
+      test: ["CMD-SHELL", "pg_isready -U cyperf"]
       interval: 5s
       timeout: 10s
       retries: 5
     networks:
       - cyperf_network
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: cyperf_cache_dev
-    ports:
-      - "6379:6379"
+    container_name: cyperf_cache
     volumes:
       - redis_data:/data
     healthcheck:
@@ -34,33 +31,46 @@ services:
       retries: 5
     networks:
       - cyperf_network
+    restart: unless-stopped
 
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: cyperf_api_dev
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    container_name: cyperf_api
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://cyperf_dev:cyperf_dev_password@postgres:5432/cyperf_cve_dev
+      DATABASE_URL: postgresql+asyncpg://cyperf:cyperf_password@postgres:5432/cyperf_cve
       REDIS_URL: redis://redis:6379/0
-      CYPERF_CONTROLLER_IP: ec2-44-255-23-243.us-west-2.compute.amazonaws.com
-      CYPERF_USERNAME: admin
-      CYPERF_PASSWORD: CyPerf&Keysight#1
-      CYPERF_SYNC_INTERVAL_HOURS: 24
-      LOG_LEVEL: INFO
-      ENVIRONMENT: development
+      CYPERF_CONTROLLER_IP: ${CYPERF_CONTROLLER_IP:-}
+      CYPERF_USERNAME: ${CYPERF_USERNAME:-}
+      CYPERF_PASSWORD: ${CYPERF_PASSWORD:-}
+      CYPERF_SYNC_INTERVAL_HOURS: ${CYPERF_SYNC_INTERVAL_HOURS:-24}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: production
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
     networks:
       - cyperf_network
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    container_name: cyperf_frontend
+    ports:
+      - "5174:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    networks:
+      - cyperf_network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
