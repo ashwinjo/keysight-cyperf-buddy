@@ -24,6 +24,7 @@ import { ChevronDown, Settings } from 'lucide-react';
 import axios from 'axios';
 import { SyncButton } from './SyncButton';
 import { SettingsPanel } from './SettingsPanel';
+import { ErrorBoundary } from '../ErrorBoundary';
 import { useSyncStatus } from '../../hooks/useAPI';
 
 interface NavLink {
@@ -217,46 +218,50 @@ export default function Navigation() {
             </div>
           </div>
 
-          {/* Right: Sync button + Settings gear */}
-          <div className="flex items-center gap-3">
-            <SyncButton
-              endpoint={endpoint}
-              lastSyncAt={lastSyncAt}
-              onSyncComplete={(success) => {
-                if (success) {
-                  // Refresh endpoint config in case sync updated something
-                  void fetchEndpointConfig();
-                }
-              }}
-            />
-
-            <button
-              onClick={() => setShowSettings(true)}
-              aria-label="Open CyPerf endpoint settings"
-              title="CyPerf endpoint settings"
-              className={`inline-flex items-center justify-center h-8 w-8 rounded-md
-                text-luxury-text-secondary hover:text-luxury-text hover:bg-luxury-bg-subtle
-                transition-colors duration-200
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-luxury-accent
-                focus-visible:ring-offset-2 focus-visible:ring-offset-luxury-bg
-                ${!endpoint ? 'text-luxury-accent' : ''}`}
-            >
-              <Settings
-                className={`h-4 w-4 ${!endpoint ? 'text-luxury-accent' : ''}`}
-                aria-hidden="true"
+          {/* Right: Sync button + Settings gear (wrapped in ErrorBoundary) */}
+          <ErrorBoundary label="NavbarControls">
+            <div className="flex items-center gap-3">
+              <SyncButton
+                endpoint={endpoint}
+                lastSyncAt={lastSyncAt}
+                onSyncComplete={(success) => {
+                  if (success) {
+                    // Refresh endpoint config in case sync updated something
+                    void fetchEndpointConfig();
+                  }
+                }}
               />
-            </button>
-          </div>
+
+              <button
+                onClick={() => setShowSettings(true)}
+                aria-label="Open CyPerf endpoint settings"
+                title="CyPerf endpoint settings"
+                className={`inline-flex items-center justify-center h-8 w-8 rounded-md
+                  text-luxury-text-secondary hover:text-luxury-text hover:bg-luxury-bg-subtle
+                  transition-colors duration-200
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-luxury-accent
+                  focus-visible:ring-offset-2 focus-visible:ring-offset-luxury-bg
+                  ${!endpoint ? 'text-luxury-accent' : ''}`}
+              >
+                <Settings
+                  className={`h-4 w-4 ${!endpoint ? 'text-luxury-accent' : ''}`}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          </ErrorBoundary>
         </div>
       </div>
 
       {/* Settings modal (rendered outside nav div to avoid z-index issues) */}
-      <SettingsPanel
-        isOpen={showSettings}
-        onOpenChange={setShowSettings}
-        currentEndpoint={endpoint}
-        onEndpointSaved={handleEndpointSaved}
-      />
+      <ErrorBoundary label="SettingsPanel" fallback={<div />}>
+        <SettingsPanel
+          isOpen={showSettings}
+          onOpenChange={setShowSettings}
+          currentEndpoint={endpoint}
+          onEndpointSaved={handleEndpointSaved}
+        />
+      </ErrorBoundary>
     </nav>
   );
 }
