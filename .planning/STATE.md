@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
-**Last updated:** 2026-02-26
-**Session:** Quick Task 9 complete - Search boxes for Apps and App Types (3 commits: c785958, 78e91ad, 1299e69)
+**Last updated:** 2026-02-27
+**Session:** Quick Task 10-01 complete - Dynamic CyPerf Endpoint + system_config backend (4 commits: fdd5ec6, e583e29, da99d53, 9ecb5c9)
 
 ---
 
@@ -143,6 +143,11 @@ Phase 1 (Setup) ✓
 - [Phase 04.1-sales-funnel Plan 04]: Fire-and-forget test patches `send_contact_email` (not `_send_email_background`) — stronger behavioral assertion that the wrapper actually absorbs exceptions
 - [Phase 04.1-sales-funnel Plan 04]: test_send_email_builds_correct_recipient added as bonus test — protects the non-trivial invariant that sendmail receives to_email as second arg, not from_email
 - [Phase 04.1-sales-funnel Plan 04]: 11 pre-existing failures in full suite are SQLAlchemy/Python 3.14 incompatibilities in NVD/Cyperf test modules — not introduced by plan 04; all 25 new tests pass cleanly
+- [Quick Task 10-01]: system_config table is generic key-value (not endpoint-specific column) — extensible without new migrations for future admin config keys
+- [Quick Task 10-01]: validate_endpoint_connectivity returns (bool, str) tuple — caller controls HTTP status code; function stays pure and testable
+- [Quick Task 10-01]: SSL verification disabled for connectivity check (CyPerf self-signed cert, pre-existing pattern in CyperfService)
+- [Quick Task 10-01]: models/ package (not models.py) is the active models module — models.py is a legacy artifact shadowed by the package directory
+- [Quick Task 10-01]: GET endpoint returns is_valid=False — validation status is only authoritative after POST; GET only reports current stored value
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -185,6 +190,7 @@ None currently. Phases 1-3 complete and operational.
 | 7 | Dark theme refinement and column visibility | 2026-02-24 | — | — |
 | 8 | UI renaming and navigation restructuring | 2026-02-26 | 8001a2d | [8-ui-renaming-and-navigation-restructuring](./quick/8-ui-renaming-and-navigation-restructuring/) |
 | 9 | Add search box in Apps and App Types sections | 2026-02-26 | 1299e69 | [9-add-a-search-box-in-the-apps-as-well-as-](./quick/9-add-a-search-box-in-the-apps-as-well-as-/) |
+| 10 | Dynamic CyPerf endpoint config + backend API | 2026-02-27 | 9ecb5c9 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 
 ---
 
