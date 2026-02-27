@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-27
-**Session:** Quick Task 10-03 complete - Frontend navbar SyncButton + SettingsPanel (3 commits: 1bb85d3, edafae7, 01f6bef)
+**Session:** Quick Task 10-04 complete - useSyncPolling hook + sonner toasts + ErrorBoundary (3 commits: 4e8c07a, 3e74204, 086b15f)
 
 ---
 
@@ -157,6 +157,10 @@ Phase 1 (Setup) ✓
 - [Quick Task 10-03]: lastSyncAt sourced from existing useSyncStatus hook — avoids duplicate sync-status polling in Navigation
 - [Quick Task 10-03]: Dialog ui component created locally — @radix-ui/react-dialog was in package.json but no shadcn wrapper existed
 - [Quick Task 10-03]: Settings gear icon highlighted in luxury-accent when endpoint unconfigured — visual onboarding cue
+- [Quick Task 10-04]: axios used directly (not api.ts) in useSyncPolling — consistent with project pattern; api.ts does not exist
+- [Quick Task 10-04]: SyncStatus fields use snake_case (cves_extracted, error_message) — matches actual backend JSON; plan template used camelCase
+- [Quick Task 10-04]: loadingToastRef pattern for dismiss-and-replace — toast.promise not used because sync may or may not poll depending on backend response
+- [Quick Task 10-04]: Dual ErrorBoundary in Navigation (controls + modal) — modal fallback=<div /> so SettingsPanel crash is invisible; controls boundary shows error strip
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -202,6 +206,7 @@ None currently. Phases 1-3 complete and operational.
 | 10 | Dynamic CyPerf endpoint config + backend API (Wave 1) | 2026-02-27 | 9ecb5c9 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 | 10b | Dynamic endpoint sync triggering + integration tests (Wave 2) | 2026-02-27 | 9a3c7e6 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 | 10c | Frontend SyncButton + SettingsPanel navbar integration (Wave 3) | 2026-02-27 | 01f6bef | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
+| 10d | useSyncPolling hook + sonner toasts + ErrorBoundary (Wave 3 Part 2) | 2026-02-27 | 086b15f | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 
 ---
 
