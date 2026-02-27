@@ -3,6 +3,7 @@
 import logging
 import os
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,7 +17,7 @@ from db.sync_metadata import SyncMetadata
 from db.system_config import SystemConfig
 from dependencies import get_redis
 from models import EndpointConfigRequest, EndpointConfigResponse, SyncStatusResponse
-from scheduler import trigger_cyperf_sync_now
+from scheduler import get_scheduler, trigger_cyperf_sync_now
 from services.cyperf_service import validate_endpoint_connectivity
 from services.sync_service import perform_sync
 
@@ -271,8 +272,6 @@ async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
         # Option B (recommended): Queue manual sync job to scheduler
         # This ensures consistency with scheduled jobs
         try:
-            from scheduler import get_scheduler
-
             scheduler = get_scheduler()
             trigger_cyperf_sync_now(scheduler)
             logger.info("Manual sync triggered via POST /admin/sync-cyperf (queued to scheduler)")
@@ -300,6 +299,115 @@ async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
             status_code=500,
             detail=f"Failed to trigger sync: {str(e)}",
         )
+
+
+@router.post("/sync-cyperf-now")
+async def trigger_sync_cyperf_now(
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Trigger immediate Cyperf sync with currently configured endpoint.
+
+    Validates that a CyPerf endpoint is configured in system_config before
+    queueing the job. Queues an immediate one-time sync job via APScheduler's
+    ``trigger="date"`` mechanism (fires at ``datetime.utcnow()``).
+
+    Falls back to direct ``perform_sync()`` execution if the scheduler is
+    unavailable (e.g., during testing or if startup failed).
+
+    Returns:
+        HTTP 200 with ``status="sync_queued"`` and ``job_id`` when scheduler queues job.
+        HTTP 200 with ``status="sync_completed"`` when fallback direct execution runs.
+        HTTP 400 if endpoint is not configured or is empty.
+        HTTP 500 if direct execution fallback also fails.
+
+    Note:
+        The APScheduler job is created with ``max_instances=1`` on the recurring
+        job (``cyperf_sync``). Manual jobs carry a unique id so they do not
+        conflict with the scheduled run — APScheduler prevents concurrent
+        execution across all jobs with the same function only when
+        ``max_instances`` is set per-job, not globally.
+    """
+    # Step 1: Validate endpoint is configured
+    endpoint: str = ""
+    try:
+        config_value = await SystemConfig.get_value(session, "cyperf_endpoint")
+        if config_value and config_value.strip():
+            endpoint = config_value.strip()
+    except Exception as db_exc:
+        logger.warning("DB read failed during sync-cyperf-now endpoint check: %s", db_exc)
+
+    if not endpoint:
+        # No system_config value — check env var as last resort
+        env_endpoint = os.getenv("CYPERF_CONTROLLER_IP", "").strip()
+        if not env_endpoint:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Cyperf endpoint not configured. "
+                    "Visit settings to configure the endpoint before triggering a sync."
+                ),
+            )
+        endpoint = env_endpoint
+
+    # Step 2: Queue job to scheduler (preferred path)
+    settings = get_settings()
+    try:
+        from scheduler import sync_cyperf_job
+
+        scheduler = get_scheduler()
+        if not scheduler.running:
+            raise RuntimeError("Scheduler is initialized but not running")
+
+        job_id = f"manual_sync_{uuid4()}"
+
+        # MinimalApp stub: sync_cyperf_job only needs 'app' for the lifespan
+        # context; it immediately calls get_db_session() internally, not via app
+        class _MinimalApp:
+            pass
+
+        job = scheduler.add_job(
+            sync_cyperf_job,
+            trigger="date",
+            run_date=datetime.utcnow(),
+            args=[_MinimalApp(), settings],
+            id=job_id,
+            name="Manual Cyperf Sync",
+            replace_existing=False,
+        )
+        logger.info(
+            "Manual Cyperf sync queued via scheduler (job_id=%s, endpoint=%s)",
+            job.id,
+            endpoint,
+        )
+        return {
+            "status": "sync_queued",
+            "message": "Cyperf sync queued for immediate execution",
+            "job_id": job.id,
+            "endpoint": endpoint,
+        }
+
+    except Exception as scheduler_exc:
+        # Scheduler unavailable — fall back to direct synchronous execution
+        logger.warning(
+            "Scheduler unavailable (%s); executing Cyperf sync directly",
+            scheduler_exc,
+        )
+
+        try:
+            await perform_sync(session=session, settings=settings)
+            logger.info("Manual Cyperf sync completed via direct execution (endpoint=%s)", endpoint)
+            return {
+                "status": "sync_completed",
+                "message": "Cyperf sync completed immediately (scheduler not available)",
+                "job_id": None,
+                "endpoint": endpoint,
+            }
+        except Exception as sync_exc:
+            logger.error("Direct Cyperf sync execution failed: %s", sync_exc)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Sync execution failed: {sync_exc}",
+            ) from sync_exc
 
 
 @router.post("/sync-cyperf-applications")
