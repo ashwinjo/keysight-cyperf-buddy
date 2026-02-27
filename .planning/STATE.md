@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-27
-**Session:** Quick Task 10-02 complete - Sync triggering and backend integration (3 commits: 4efdbb5, 991d68d, 9a3c7e6)
+**Session:** Quick Task 10-03 complete - Frontend navbar SyncButton + SettingsPanel (3 commits: 1bb85d3, edafae7, 01f6bef)
 
 ---
 
@@ -152,6 +152,11 @@ Phase 1 (Setup) ✓
 - [Quick Task 10-02]: POST /admin/sync-cyperf-now accepts env var as valid endpoint source if system_config is empty — backwards compatibility for env-var users
 - [Quick Task 10-02]: UUID job_id per manual trigger — prevents replace_existing conflicts with concurrent manual calls and the recurring 02:00 UTC job
 - [Quick Task 10-02]: _MinimalApp stub passed as app arg to sync_cyperf_job in manual trigger — sync_cyperf_job ignores app arg, so no real FastAPI app needed
+- [Quick Task 10-03]: axios used directly (not api.ts helper) — matches existing project pattern in useAPI.ts and Navigation.tsx
+- [Quick Task 10-03]: POST /admin/config/cyperf-endpoint raises HTTP 400 on validation failure — SettingsPanel handles axios error not response.is_valid field
+- [Quick Task 10-03]: lastSyncAt sourced from existing useSyncStatus hook — avoids duplicate sync-status polling in Navigation
+- [Quick Task 10-03]: Dialog ui component created locally — @radix-ui/react-dialog was in package.json but no shadcn wrapper existed
+- [Quick Task 10-03]: Settings gear icon highlighted in luxury-accent when endpoint unconfigured — visual onboarding cue
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
@@ -196,6 +201,7 @@ None currently. Phases 1-3 complete and operational.
 | 9 | Add search box in Apps and App Types sections | 2026-02-26 | 1299e69 | [9-add-a-search-box-in-the-apps-as-well-as-](./quick/9-add-a-search-box-in-the-apps-as-well-as-/) |
 | 10 | Dynamic CyPerf endpoint config + backend API (Wave 1) | 2026-02-27 | 9ecb5c9 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 | 10b | Dynamic endpoint sync triggering + integration tests (Wave 2) | 2026-02-27 | 9a3c7e6 | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
+| 10c | Frontend SyncButton + SettingsPanel navbar integration (Wave 3) | 2026-02-27 | 01f6bef | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 
 ---
 
