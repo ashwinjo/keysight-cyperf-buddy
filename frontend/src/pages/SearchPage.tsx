@@ -57,6 +57,77 @@ export default function SearchPage() {
         </p>
       </div>
 
+      {/* Premium Info Card */}
+      <div className="relative rounded-xl overflow-hidden shadow-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-950/50 via-emerald-900/30 to-emerald-950/50 backdrop-blur-sm">
+        {/* Gradient accent bars */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500" />
+
+        <div className="p-6 space-y-5">
+          {/* Header */}
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 pt-1">
+              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg">
+                <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg font-display font-bold text-emerald-300 tracking-luxury">
+                Unlock CVE Intelligence
+              </h3>
+              <p className="text-xs text-emerald-200/70 mt-1 uppercase tracking-wider font-semibold">
+                Explore vulnerabilities & test resilience
+              </p>
+            </div>
+          </div>
+
+          {/* Main content sections */}
+          <div className="space-y-4 pl-14">
+            {/* Section 1: Research */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <h4 className="text-sm font-semibold text-emerald-200">Research & Analysis</h4>
+              </div>
+              <p className="text-sm text-emerald-100/80 leading-relaxed">
+                Search the <span className="font-semibold text-emerald-300">NIST Vulnerability Database</span> to find detailed CVE information and check if exploits are available through <span className="font-semibold text-emerald-300">Keysight Strikes</span>.
+              </p>
+            </div>
+
+            {/* Section 2: Testing */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                <h4 className="text-sm font-semibold text-emerald-200">Infrastructure Testing</h4>
+              </div>
+              <p className="text-sm text-emerald-100/80 leading-relaxed">
+                Test your defenses by simulating <span className="font-semibold text-emerald-300">Application + CVE Strike traffic</span> combinations. Verify your infrastructure's resilience against real-world exploits through <span className="font-semibold text-emerald-300">CVE Strikes and AI Strikes</span>.
+              </p>
+            </div>
+
+            {/* Section 3: Profiling */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <h4 className="text-sm font-semibold text-emerald-200">Application Profiling</h4>
+              </div>
+              <p className="text-sm text-emerald-100/80 leading-relaxed">
+                Leverage Cyperf for comprehensive <span className="font-semibold text-emerald-300">L4-L7 Application profiling</span>. Explore supported <span className="font-semibold text-emerald-300">Application Types</span> and <span className="font-semibold text-emerald-300">Applications</span> to build a complete picture of your environment.
+              </p>
+            </div>
+          </div>
+
+          {/* CTA Footer */}
+          <div className="flex items-center gap-2 pt-3 border-t border-emerald-500/20 text-xs text-emerald-300/80">
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            <span>Start by searching a CVE ID above to begin your security assessment</span>
+          </div>
+        </div>
+      </div>
+
       <SearchForm
         onSearch={setSearchInput}
         isLoading={isLoading}
