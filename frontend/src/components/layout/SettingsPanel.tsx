@@ -5,15 +5,17 @@
  * Calls POST /api/admin/config/cyperf-endpoint to validate + persist the endpoint.
  *
  * Backend behaviour to handle:
- *   - HTTP 200  → endpoint saved, is_valid=true
+ *   - HTTP 200  → endpoint saved, success toast + auto-close
  *   - HTTP 400  → validation failed; detail field contains the reason
  *   - HTTP 500  → DB write failed after validation passed
  *
- * On success the modal auto-closes after 1 second and invokes onEndpointSaved.
+ * Toast notifications via sonner are shown for all async state transitions.
+ * On success the modal auto-closes after 1 second.
  * On failure the error is shown in-line and the modal stays open.
  */
 import { useState, useEffect } from "react";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import axios from "axios";
 import {
   Dialog,
@@ -55,6 +57,7 @@ export function SettingsPanel({
     const trimmed = endpoint.trim();
 
     if (!trimmed) {
+      toast.error("Endpoint cannot be empty.");
       setValidationError("Endpoint cannot be empty.");
       return;
     }
@@ -63,18 +66,24 @@ export function SettingsPanel({
     setValidationError(null);
     setValidationSuccess(false);
 
+    const toastId = toast.loading("Validating endpoint...");
+
     try {
       await axios.post("/api/admin/config/cyperf-endpoint", {
         endpoint: trimmed,
       });
 
       // HTTP 200 means validated and saved
+      toast.dismiss(toastId);
+      toast.success("Endpoint validated and saved!");
       setValidationSuccess(true);
       onEndpointSaved?.(trimmed);
 
       // Auto-close after 1 second so user sees the success message
       setTimeout(() => onOpenChange(false), 1000);
     } catch (err) {
+      toast.dismiss(toastId);
+
       let message = "Failed to save endpoint. Please try again.";
 
       if (axios.isAxiosError(err)) {
@@ -86,12 +95,16 @@ export function SettingsPanel({
           message =
             "Endpoint validated but database write failed. Please retry.";
         } else if (err.response?.status === 400) {
-          message = "Endpoint validation failed. Check the address and try again.";
+          message =
+            "Endpoint validation failed. Check the address and try again.";
+        } else if (!err.response) {
+          message = "Network error. Check your connection and try again.";
         }
       } else if (err instanceof Error) {
         message = err.message;
       }
 
+      toast.error(message);
       setValidationError(message);
     } finally {
       setIsSaving(false);

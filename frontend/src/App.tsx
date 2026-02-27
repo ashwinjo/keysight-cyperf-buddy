@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import SearchPage from './pages/SearchPage';
 import BrowsePage from './pages/BrowsePage';
 import BatchPage from './pages/BatchPage';
@@ -18,6 +19,19 @@ export default function App(): React.ReactNode {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
+        <Toaster
+          position="top-right"
+          theme="dark"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              background: 'var(--luxury-bg, #0a0a0a)',
+              border: '1px solid var(--luxury-border, #2a2a2a)',
+              color: 'var(--luxury-text, #e5e5e5)',
+            },
+          }}
+        />
         <div className="flex flex-col min-h-screen bg-luxury-bg text-luxury-text">
           <Navigation />
           <StaleDataWarning />
