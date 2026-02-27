@@ -1,7 +1,7 @@
 # Project State: Cyperf CVE Tracker
 
 **Last updated:** 2026-02-27
-**Session:** Quick Task 11 complete - standardize all search boxes to SearchBox shared component (3 commits: 597f96e, 195df98, 3542137).
+**Session:** Quick Task 12 complete - Ubuntu deployment setup: production docker-compose.yml, nginx.conf, OneClickStart.sh, repo root cleanup (2 commits: 93b4ee8, f29b031).
 
 ---
 
@@ -213,6 +213,7 @@ None currently. Phases 1-3 complete and operational.
 | 10d | useSyncPolling hook + sonner toasts + ErrorBoundary (Wave 3 Part 2) | 2026-02-27 | 086b15f | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 | 10e | Testing, E2E plan, security review, documentation (Wave 4) | 2026-02-27 | 8594dfa | [10-dynamic-cyperf-endpoint-and-sync-button](./quick/10-dynamic-cyperf-endpoint-and-sync-button/) |
 | 11 | Standardize all search boxes to shared SearchBox component | 2026-02-27 | 3542137 | [11-standardize-all-search-boxes-to-match-re](./quick/11-standardize-all-search-boxes-to-match-re/) |
+| 12 | Ubuntu deployment setup: production compose, nginx, OneClickStart.sh | 2026-02-27 | f29b031 | [12-create-docker-compose-for-ubuntu-deploym](./quick/12-create-docker-compose-for-ubuntu-deploym/) |
 
 ---
 
