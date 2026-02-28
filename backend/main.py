@@ -5,6 +5,9 @@ from contextlib import asynccontextmanager
 
 import redis.asyncio as aioredis
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
 
 from config import get_settings
 from dependencies import set_redis_client
@@ -109,6 +112,28 @@ app = FastAPI(
     version="0.2.0",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Flatten Pydantic field-level error list into a single human-readable string.
+
+    FastAPI's default 422 response contains ``detail`` as a list of error objects,
+    which cannot be rendered as a React child directly.  This handler normalises all
+    422s so that ``detail`` is always a plain string — consistent with the manually
+    raised ``HTTPException`` responses in route handlers.
+    """
+    errors = exc.errors()
+    messages: list[str] = []
+    for err in errors:
+        loc = " -> ".join(str(part) for part in err.get("loc", []) if part != "body")
+        msg = err.get("msg", "invalid value")
+        messages.append(f"{loc}: {msg}" if loc else msg)
+    detail = "; ".join(messages) if messages else "Validation error"
+    return JSONResponse(status_code=422, content={"detail": detail})
+
 
 app.include_router(health_router)
 app.include_router(cve_router)
