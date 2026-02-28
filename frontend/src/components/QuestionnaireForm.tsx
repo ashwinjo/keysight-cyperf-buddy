@@ -74,6 +74,11 @@ export const QuestionnaireForm: React.FC<QuestionnaireFormProps> = ({ onSubmit }
       onSuccess: (data) => {
         onSubmit?.(data);
       },
+      onError: () => {
+        // mutation.error is now set with a plain Error (string message).
+        // React Query re-renders the component automatically — the
+        // {mutation.error && ...} block above handles the display.
+      },
     });
   };
 
@@ -188,7 +193,9 @@ export const QuestionnaireForm: React.FC<QuestionnaireFormProps> = ({ onSubmit }
       {mutation.error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <p className="text-red-800 font-semibold text-sm">
-            {mutation.error instanceof Error ? mutation.error.message : 'Failed to get recommendations'}
+            {mutation.error instanceof Error
+              ? String(mutation.error.message)
+              : 'Failed to get recommendations'}
           </p>
         </div>
       )}
