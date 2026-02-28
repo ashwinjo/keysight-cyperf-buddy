@@ -179,11 +179,37 @@ export interface RecommendationResponse {
 export const useGetRecommendations = () => {
   return useMutation({
     mutationFn: async (questions: QuestionnaireRequest) => {
-      const res = await axios.post<RecommendationResponse>(
-        `${API_BASE}/ashrai/recommend`,
-        questions
-      );
-      return res.data;
+      try {
+        const res = await axios.post<RecommendationResponse>(
+          `${API_BASE}/ashrai/recommend`,
+          questions
+        );
+        return res.data;
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          const detail = err.response.data?.detail;
+          // detail may be a string (HTTPException) or array (Pydantic ValidationError
+          // before the app-level handler normalises it).  Handle both to be safe.
+          let message: string;
+          if (typeof detail === 'string') {
+            message = detail;
+          } else if (Array.isArray(detail)) {
+            message = detail
+              .map((d: { loc?: unknown[]; msg?: string }) => {
+                const loc = (d.loc ?? [])
+                  .filter((part) => part !== 'body')
+                  .join(' -> ');
+                return loc ? `${loc}: ${d.msg ?? 'invalid value'}` : (d.msg ?? 'invalid value');
+              })
+              .join('; ');
+          } else {
+            message = `Request failed with status ${err.response.status}`;
+          }
+          throw new Error(message);
+        }
+        // Re-throw non-Axios errors (network down, etc.) unchanged
+        throw err;
+      }
     },
   });
 };
