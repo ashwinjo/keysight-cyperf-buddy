@@ -10,6 +10,7 @@ from config import get_settings
 from dependencies import set_redis_client
 from routes.admin import router as admin_router
 from routes.ai_cves import router as ai_cves_router
+from routes.ashrai import router as ashrai_router
 from routes.contact import router as contact_router
 from routes.cve import router as cve_router
 from routes.cyperf_applications import router as cyperf_applications_router
@@ -114,6 +115,7 @@ app.include_router(cve_router)
 app.include_router(admin_router)
 app.include_router(contact_router)
 app.include_router(ai_cves_router)
+app.include_router(ashrai_router)
 app.include_router(cyperf_applications_router)
 
 

@@ -10,7 +10,7 @@
  *   useLatestCVEs   - Paginated CVE browse (GET /cve/latest)
  *   useSyncStatus   - Cyperf sync timestamp (GET /admin/sync-status)
  */
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { CVEResponse, SyncStatusResponse, BrowseListResponse, AiCVEResponse } from '../types/api';
 
@@ -149,5 +149,41 @@ export const useCyperfApplications = () => {
       return res.data.results || [];
     },
     staleTime: 1000 * 60 * 5,  // 5 minutes
+  });
+};
+
+// Hook 7: Mutation for AshRAI questionnaire recommendations
+export interface QuestionnaireRequest {
+  testing_focus: 'Application Profile' | 'Security / Attacks' | 'Both';
+  application_metric?: string | null;
+  attacks_metric?: string | null;
+  use_case: string;
+  needs_automation: boolean;
+}
+
+export interface Recommendation {
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  category: 'configuration' | 'metrics' | 'automation' | 'topology' | 'validation';
+}
+
+export interface RecommendationResponse {
+  success: boolean;
+  message: string;
+  testing_focus: string;
+  recommendations: Recommendation[];
+  next_steps: string[];
+}
+
+export const useGetRecommendations = () => {
+  return useMutation({
+    mutationFn: async (questions: QuestionnaireRequest) => {
+      const res = await axios.post<RecommendationResponse>(
+        `${API_BASE}/ashrai/recommend`,
+        questions
+      );
+      return res.data;
+    },
   });
 };
