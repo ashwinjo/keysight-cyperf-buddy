@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/ashrai", tags=["ashrai"])
+router = APIRouter(prefix="/api/ashrai", tags=["ashrai"])
 
 
 # ---------------------------------------------------------------------------
