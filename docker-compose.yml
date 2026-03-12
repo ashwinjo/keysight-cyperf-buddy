@@ -58,6 +58,26 @@ services:
       - cyperf_network
     restart: unless-stopped
 
+  # L4-7 Test Advisor agent (Gemini-powered recommendation service)
+  agent:
+    build:
+      context: ./agent-service
+      dockerfile: Dockerfile
+    container_name: cyperf_agent_l47
+    ports:
+      - "8001:8001"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      BACKEND_API_URL: http://api:8000
+      BACKEND_TIMEOUT_SECONDS: "10"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: production
+    depends_on:
+      - api
+    networks:
+      - cyperf_network
+    restart: unless-stopped
+
   frontend:
     image: nginx:alpine
     container_name: cyperf_frontend
