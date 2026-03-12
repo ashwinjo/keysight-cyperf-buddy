@@ -10,6 +10,7 @@ import CyperfAppTypesPage from './pages/CyperfAppTypesPage';
 import CyperfAppsPage from './pages/CyperfAppsPage';
 import WhatIsCyperfPage from './pages/WhatIsCyperfPage';
 import { AshAiAssistantPage } from './pages/AshAiAssistantPage';
+import { L47AdvisorPage } from './pages/L47AdvisorPage';
 import Navigation from './components/layout/Navigation';
 import StaleDataWarning from './components/layout/StaleDataWarning';
 import StatusBar from './components/layout/StatusBar';
@@ -46,6 +47,7 @@ export default function App(): React.ReactNode {
               <Route path="/cyperf-apps" element={<CyperfAppsPage />} />
               <Route path="/what-is-cyperf" element={<WhatIsCyperfPage />} />
               <Route path="/ashrai-assistant" element={<AshAiAssistantPage />} />
+              <Route path="/l47-advisor" element={<L47AdvisorPage />} />
             </Routes>
           </main>
           <StatusBar />

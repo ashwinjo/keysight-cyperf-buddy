@@ -59,6 +59,14 @@ const NAV_STRUCTURE: NavEntry[] = [
       { path: '/cyperf-apps', label: 'Apps' },
     ],
   },
+  {
+    type: 'group',
+    label: 'AI Tools',
+    children: [
+      { path: '/ashrai-assistant', label: 'AshRAI' },
+      { path: '/l47-advisor', label: 'L4-7 Advisor' },
+    ],
+  },
   { type: 'link', path: '/what-is-cyperf', label: 'What is Cyperf' },
 ];
 
