@@ -22,7 +22,7 @@
 **Status:** Milestone complete
 
 **Progress:**
-[████████░░] 76%
+[███████░░░] 74%
 Phase 1 [Project Setup + Infrastructure]           [x] Complete (7/7 tasks)
 Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/2 plans)
 Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
@@ -60,6 +60,7 @@ Overall: 3/5 phases complete (60%)
 | Phase 06 P02 | 4 | 2 tasks | 9 files |
 | Phase 06-agentic-l4-7-test-advisor P03 | 7 | 2 tasks | 7 files |
 | Phase 06-agentic-l4-7-test-advisor P03 | 10 | 3 tasks | 7 files |
+| Phase 07 P01 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Overall: 3/5 phases complete (60%)
 - Phase 3.1 inserted after Phase 3: Cyperf CVE Ingestion Refactor (URGENT) — Rework Cyperf sync pipeline to use ApplicationResourcesApi.get_resources_strikes() pattern from info_fetch.py; ingest JSON CVE→Strike mappings into persistent DB for UI cross-reference
 - Phase 4.1 inserted after Phase 4: Sales Funnel (INSERTED)
 - Phase 6 added: Agentic L4-7 Test Advisor (Gemini) — standalone Docker service that recommends Cyperf Application / Strike based on use case, objectives, and timelines; portal integration to follow
+- Phase 7 added: Frontend L4-7 Test Advisor — UI tab for users to submit L4-7 test scenarios and view agent recommendations from the Phase 6 agent service
 
 ### Phase Dependencies
 
@@ -185,6 +187,9 @@ Phase 1 (Setup) ✓
 - [Phase 06-agentic-l4-7-test-advisor]: sys.modules stub for google.generativeai in conftest.py resolves Python 3.14 protobuf C-extension incompatibility without pinning package version
 - [Phase 06-agentic-l4-7-test-advisor]: ASGITransport pattern used for httpx integration tests — app= kwarg removed in httpx 0.27+; ASGITransport is forward-compatible with 0.28.1 installed locally
 - [Phase 06-agentic-l4-7-test-advisor]: app.state.agent injected directly in integration tests to bypass FastAPI lifespan — avoids adding asgi-lifespan as test dependency
+- [Phase 07-01]: No rewrite on /api/l47 Vite proxy — agent expects full path /api/l47/recommend; stripping prefix yields 404
+- [Phase 07-01]: Hook uses '/api/l47/recommend' directly, not API_BASE — API_BASE routes through rewriting proxy to port 8000, bypassing agent on 8001
+- [Phase 07-01]: nginx proxy_pass http://agent:8001/api/l47/ with trailing slashes preserves full /api/l47/ prefix to agent
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
