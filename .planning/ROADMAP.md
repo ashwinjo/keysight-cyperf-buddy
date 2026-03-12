@@ -199,6 +199,17 @@ Plans:
 
 **Coverage: 21/21 v1 requirements mapped. No orphans.**
 
+### Phase 6: Agentic L4-7 Test Advisor
+
+**Goal:** A Gemini-powered agentic service (standalone Docker container) that accepts a user's L4-7 test use case, objectives, and timelines, queries the existing backend REST API (Cyperf Applications and Strike mappings), and returns a ranked recommendation of up to 3 Cyperf Application or Strike profiles — with rationale. Ships as a standalone container first; integrates into the portal UI in a follow-on task.
+**Depends on:** Phase 3, Phase 4
+**Plans:** 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Add GET /cyperf-applications/strikes endpoint to main backend
+- [ ] 06-02-PLAN.md — Build agent-service/ (FastAPI app, models, API client, Gemini ranking, Dockerfile)
+- [ ] 06-03-PLAN.md — Docker Compose integration, .env.example, integration tests, human verification
+
 ---
 
 *Roadmap created: 2026-02-22*
