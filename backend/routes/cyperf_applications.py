@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from db.cverf_cve_strike_mappings import CvrfCveStrikeMappings
 from db.cyperf_application import CyperfApplication
 from db.cyperf_application_type import CyperfApplicationType
 from models.cyperf_applications import (
@@ -14,6 +15,8 @@ from models.cyperf_applications import (
     CyperfApplicationResponse,
     CyperfApplicationTypeListResponse,
     CyperfApplicationTypeResponse,
+    CyperfStrikeListResponse,
+    CyperfStrikeResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,6 +48,29 @@ async def get_application_types(
     logger.debug(f"GET /cyperf-applications/types -> {len(results)} records")
 
     return CyperfApplicationTypeListResponse(results=results, total=len(results))
+
+
+@router.get("/strikes", response_model=CyperfStrikeListResponse)
+async def get_strikes(
+    session: AsyncSession = Depends(get_db),
+) -> CyperfStrikeListResponse:
+    """Get all distinct Cyperf strike names from CVE-Strike mappings.
+
+    Returns distinct strike names stored in cverf_cve_strike_mappings table.
+    Used by the L4-7 Test Advisor agent for recommendation matching.
+    """
+    stmt = (
+        select(CvrfCveStrikeMappings.strike_name)
+        .distinct()
+        .order_by(CvrfCveStrikeMappings.strike_name)
+    )
+    result = await session.execute(stmt)
+    rows = result.scalars().all()
+
+    results = [CyperfStrikeResponse(strike_name=name) for name in rows]
+    logger.debug(f"GET /cyperf-applications/strikes -> {len(results)} distinct strikes")
+
+    return CyperfStrikeListResponse(results=results, total=len(results))
 
 
 @router.get("", response_model=CyperfApplicationListResponse)
