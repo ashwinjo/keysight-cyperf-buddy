@@ -5,6 +5,8 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
+import google.generativeai as genai
+
 from api_client import BackendAPIClient
 from config import AgentSettings
 from models import L47ScenarioRequest, Recommendation
@@ -42,8 +44,6 @@ class RecommendationAgent:
             "apps": _ProfileCache(),
             "strikes": _ProfileCache(),
         }
-        import google.generativeai as genai
-
         genai.configure(api_key=settings.gemini_api_key)
         self.model = genai.GenerativeModel("gemini-2.0-flash")
 
