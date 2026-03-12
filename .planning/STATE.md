@@ -22,7 +22,7 @@
 **Status:** Phase 4.1 complete — all 5 plans executed
 
 **Progress:**
-[██████████] 100%
+[███████░░░] 65%
 Phase 1 [Project Setup + Infrastructure]           [x] Complete (7/7 tasks)
 Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/2 plans)
 Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
@@ -56,6 +56,7 @@ Overall: 3/5 phases complete (60%)
 | Phase 04-frontend-ui P04-02 | 7 | 5 tasks | 4 files |
 | Phase 03.1-cyperf-cve-ingestion-refactor P01 | 2 | 2 tasks | 2 files |
 | Phase 03.1-cyperf-cve-ingestion-refactor P02 | 3 | 2 tasks | 3 files |
+| Phase 06-agentic-l4-7-test-advisor P01 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -166,6 +167,9 @@ Phase 1 (Setup) ✓
 - [Quick Task 10-05]: vi.advanceTimersByTimeAsync() for hook timer tests — runAllTimersAsync() exhausts maxDuration causing unexpected state transitions
 - [Quick Task 10-05]: Real axios.isAxiosError kept in mock — mocking it as vi.fn() breaks the type contract; test errors use isAxiosError: true property
 - [Quick Task 10-05]: test_cyperf_endpoint_integration.py provides multi-call integrated workflow tests that span both test_admin_config.py and test_manual_sync_integration.py domains
+- [Phase 06-agentic-l4-7-test-advisor]: Route /strikes inserted between /types and '' — FastAPI resolves in registration order; /strikes after '' would shadow
+- [Phase 06-agentic-l4-7-test-advisor]: Only strike_name field in CyperfStrikeResponse — cverf_cve_strike_mappings has no description column; agent only needs names for matching
+- [Phase 06-agentic-l4-7-test-advisor]: No caching on /strikes — data only changes on sync; caching would add complexity without benefit at current scale
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
