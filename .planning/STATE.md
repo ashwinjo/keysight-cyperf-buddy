@@ -86,6 +86,7 @@ Overall: 3/5 phases complete (60%)
 
 - Phase 3.1 inserted after Phase 3: Cyperf CVE Ingestion Refactor (URGENT) — Rework Cyperf sync pipeline to use ApplicationResourcesApi.get_resources_strikes() pattern from info_fetch.py; ingest JSON CVE→Strike mappings into persistent DB for UI cross-reference
 - Phase 4.1 inserted after Phase 4: Sales Funnel (INSERTED)
+- Phase 6 added: Agentic L4-7 Test Advisor (Gemini) — standalone Docker service that recommends Cyperf Application / Strike based on use case, objectives, and timelines; portal integration to follow
 
 ### Phase Dependencies
 
