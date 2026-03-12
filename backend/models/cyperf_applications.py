@@ -37,3 +37,16 @@ class CyperfApplicationTypeListResponse(BaseModel):
 
     results: list[CyperfApplicationTypeResponse]
     total: int
+
+
+class CyperfStrikeResponse(BaseModel):
+    """Single Cyperf strike name from cverf_cve_strike_mappings."""
+
+    strike_name: str
+
+
+class CyperfStrikeListResponse(BaseModel):
+    """Paginated list of Cyperf strike names."""
+
+    results: list[CyperfStrikeResponse]
+    total: int
