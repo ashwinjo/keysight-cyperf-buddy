@@ -22,7 +22,7 @@
 **Status:** Phase 4.1 complete — all 5 plans executed
 
 **Progress:**
-[███████░░░] 65%
+[███████░░░] 71%
 Phase 1 [Project Setup + Infrastructure]           [x] Complete (7/7 tasks)
 Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/2 plans)
 Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
@@ -57,6 +57,7 @@ Overall: 3/5 phases complete (60%)
 | Phase 03.1-cyperf-cve-ingestion-refactor P01 | 2 | 2 tasks | 2 files |
 | Phase 03.1-cyperf-cve-ingestion-refactor P02 | 3 | 2 tasks | 3 files |
 | Phase 06-agentic-l4-7-test-advisor P01 | 4 | 2 tasks | 2 files |
+| Phase 06 P02 | 4 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -170,6 +171,10 @@ Phase 1 (Setup) ✓
 - [Phase 06-agentic-l4-7-test-advisor]: Route /strikes inserted between /types and '' — FastAPI resolves in registration order; /strikes after '' would shadow
 - [Phase 06-agentic-l4-7-test-advisor]: Only strike_name field in CyperfStrikeResponse — cverf_cve_strike_mappings has no description column; agent only needs names for matching
 - [Phase 06-agentic-l4-7-test-advisor]: No caching on /strikes — data only changes on sync; caching would add complexity without benefit at current scale
+- [Phase 06-agentic-l4-7-test-advisor]: Prompt-with-context over Gemini function-calling — simpler, reliable implementation for single-phase delivery; Gemini handles NL rationale only
+- [Phase 06-agentic-l4-7-test-advisor]: Per-bucket TTL cache on agent singleton (apps/strikes independent) — avoids fetching 6000 records when only one type needed; 1h TTL balances freshness vs backend load
+- [Phase 06-agentic-l4-7-test-advisor]: gemini-2.0-flash at temperature=0.3, max_output_tokens=150 — low latency, cost-efficient, biased toward specific factual rationale
+- [Phase 06-agentic-l4-7-test-advisor]: Graceful degradation on all failure paths (backend unreachable, Gemini quota, unexpected exception) — HTTP 200 with empty recommendations, never 500
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
