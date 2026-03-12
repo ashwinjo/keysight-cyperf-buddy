@@ -213,3 +213,70 @@ export const useGetRecommendations = () => {
     },
   });
 };
+
+// ─── L4-7 Test Advisor ────────────────────────────────────────────────────────
+
+export interface L47ScenarioRequest {
+  testing_focus: 'app_performance' | 'security_attacks' | 'both';
+  use_case: string;
+  objectives: string;
+  timeline: string;
+}
+
+export interface L47Recommendation {
+  rank: number;
+  profile_name: string;
+  profile_type: 'application' | 'strike';
+  rationale: string;
+}
+
+export interface L47RecommendationResponse {
+  success: boolean;
+  message: string;
+  recommendations: L47Recommendation[];
+}
+
+/**
+ * Mutation hook: POST /api/l47/recommend → agent service (port 8001 via Vite proxy).
+ *
+ * The /api/l47 proxy in vite.config.ts routes this to the agent WITHOUT stripping
+ * the /api/l47 prefix (unlike the generic /api entry which strips /api/).
+ *
+ * Error normalization: 422 detail arrays are flattened to a single string so
+ * mutation.error.message is always renderable in JSX (prevents "Objects are not
+ * valid as React child" — same pattern as useGetRecommendations).
+ */
+export const useGetL47Recommendations = () => {
+  return useMutation({
+    mutationFn: async (scenario: L47ScenarioRequest): Promise<L47RecommendationResponse> => {
+      try {
+        const res = await axios.post<L47RecommendationResponse>(
+          '/api/l47/recommend',
+          scenario
+        );
+        return res.data;
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response) {
+          const detail = err.response.data?.detail;
+          let message: string;
+          if (typeof detail === 'string') {
+            message = detail;
+          } else if (Array.isArray(detail)) {
+            message = detail
+              .map((d: { loc?: unknown[]; msg?: string }) => {
+                const loc = (d.loc ?? [])
+                  .filter((part) => part !== 'body')
+                  .join(' -> ');
+                return loc ? `${loc}: ${d.msg ?? 'invalid value'}` : (d.msg ?? 'invalid value');
+              })
+              .join('; ');
+          } else {
+            message = `Request failed with status ${err.response.status}`;
+          }
+          throw new Error(message);
+        }
+        throw err;
+      }
+    },
+  });
+};
