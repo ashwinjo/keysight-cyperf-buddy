@@ -10,6 +10,11 @@ export default defineConfig({
     // Use array with single empty string to accept any host
     allowedHosts: [""],
     proxy: {
+      "/api/l47": {
+        target: "http://localhost:8001",
+        changeOrigin: true,
+        // No rewrite: agent expects full path /api/l47/recommend
+      },
       "/api": {
         target: "http://localhost:8000",
         changeOrigin: true,
