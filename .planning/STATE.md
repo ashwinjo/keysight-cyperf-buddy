@@ -22,7 +22,7 @@
 **Status:** Milestone complete
 
 **Progress:**
-[███████░░░] 74%
+[████████░░] 79%
 Phase 1 [Project Setup + Infrastructure]           [x] Complete (7/7 tasks)
 Phase 2 [Backend API + NVD Integration]            [x] Complete (10/10 tasks, 2/2 plans)
 Phase 3 [Cyperf Integration + Sync Engine]         [x] Complete (11/11 tasks, 2/2 plans)
@@ -61,6 +61,7 @@ Overall: 3/5 phases complete (60%)
 | Phase 06-agentic-l4-7-test-advisor P03 | 7 | 2 tasks | 7 files |
 | Phase 06-agentic-l4-7-test-advisor P03 | 10 | 3 tasks | 7 files |
 | Phase 07 P01 | 2 | 2 tasks | 3 files |
+| Phase 07 P02 | 117 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -190,6 +191,8 @@ Phase 1 (Setup) ✓
 - [Phase 07-01]: No rewrite on /api/l47 Vite proxy — agent expects full path /api/l47/recommend; stripping prefix yields 404
 - [Phase 07-01]: Hook uses '/api/l47/recommend' directly, not API_BASE — API_BASE routes through rewriting proxy to port 8000, bypassing agent on 8001
 - [Phase 07-01]: nginx proxy_pass http://agent:8001/api/l47/ with trailing slashes preserves full /api/l47/ prefix to agent
+- [Phase 07-02]: NAV_STRUCTURE group entry for AI Tools inserted before What is Cyperf — no type changes needed, existing group rendering handles it
+- [Phase 07-02]: L47ScenarioForm uses plain select/textarea/input with luxury-* classes rather than shadcn/ui Input to avoid light-theme default styles
 
 ### Phase 2
 1. **Async-first with asyncio.to_thread()** — NVD calls (sync via nvdlib) wrapped in thread pool; never blocks event loop
