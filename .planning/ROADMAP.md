@@ -210,10 +210,21 @@ Plans:
 - [ ] 06-02-PLAN.md — Build agent-service/ (FastAPI app, models, API client, Gemini ranking, Dockerfile)
 - [ ] 06-03-PLAN.md — Docker Compose integration, .env.example, integration tests, human verification
 
+### Phase 7: Frontend L4-7 Test Advisor - UI tab to submit test scenarios and display agent recommendations
+
+**Goal:** Users can navigate to a dedicated L4-7 Test Advisor page, submit a 4-field test scenario (testing focus, use case, objectives, timeline), and receive up to 3 ranked Cyperf Application or Strike profile recommendations from the Phase 6 agent service — displayed as cards with rank, profile type badge, and rationale.
+**Depends on:** Phase 6
+**Plans:** 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Proxy routing (vite.config.ts + nginx.conf) + L47 types and mutation hook in useAPI.ts
+- [ ] 07-02-PLAN.md — L47ScenarioForm + L47AdvisorPage + App.tsx route + Navigation AI Tools group
+
 ---
 
 *Roadmap created: 2026-02-22*
-*Last updated: 2026-02-23 after Phase 4 planning*
+*Last updated: 2026-03-11 after Phase 7 planning*
 *Phase 1 execution: 2026-02-23*
 *Phase 3 execution: 2026-02-23*
 *Phase 4 plans created: 2026-02-23*
+*Phase 7 plans created: 2026-03-11*
