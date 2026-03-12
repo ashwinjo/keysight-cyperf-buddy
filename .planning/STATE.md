@@ -59,6 +59,7 @@ Overall: 3/5 phases complete (60%)
 | Phase 06-agentic-l4-7-test-advisor P01 | 4 | 2 tasks | 2 files |
 | Phase 06 P02 | 4 | 2 tasks | 9 files |
 | Phase 06-agentic-l4-7-test-advisor P03 | 7 | 2 tasks | 7 files |
+| Phase 06-agentic-l4-7-test-advisor P03 | 10 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,10 @@ Phase 1 (Setup) ✓
 - [Phase 06-agentic-l4-7-test-advisor]: GEMINI_API_KEY uses empty default in docker-compose to let agent container handle fail-fast at startup, not at compose parse time
 - [Phase 06-agentic-l4-7-test-advisor]: sys.modules stub for google.generativeai in test conftest.py — Python 3.14 protobuf C-ext incompatibility; consistent with pre-existing project workaround pattern
 - [Phase 06-agentic-l4-7-test-advisor]: ASGITransport instead of AsyncClient(app=) for integration tests — httpx 0.27+ removed app= kwarg; ASGITransport is the forward-compatible API
+- [Phase 06-agentic-l4-7-test-advisor]: app.state.agent injected directly in integration tests to bypass FastAPI lifespan — avoids adding asgi-lifespan as test dependency
+- [Phase 06-agentic-l4-7-test-advisor]: GEMINI_API_KEY uses empty default in docker-compose to let agent container handle fail-fast at startup, not at compose parse time
+- [Phase 06-agentic-l4-7-test-advisor]: sys.modules stub for google.generativeai in conftest.py resolves Python 3.14 protobuf C-extension incompatibility without pinning package version
+- [Phase 06-agentic-l4-7-test-advisor]: ASGITransport pattern used for httpx integration tests — app= kwarg removed in httpx 0.27+; ASGITransport is forward-compatible with 0.28.1 installed locally
 - [Phase 06-agentic-l4-7-test-advisor]: app.state.agent injected directly in integration tests to bypass FastAPI lifespan — avoids adding asgi-lifespan as test dependency
 
 ### Phase 2
