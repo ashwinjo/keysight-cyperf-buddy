@@ -7,7 +7,20 @@
 
 import React, { useState } from 'react';
 import { QuestionnaireForm } from '../components/QuestionnaireForm';
-import { type RecommendationResponse } from '../hooks/useAPI';
+
+interface Recommendation {
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  category: 'configuration' | 'metrics' | 'automation' | 'topology' | 'validation';
+}
+
+interface RecommendationResponse {
+  message: string;
+  testing_focus: string;
+  recommendations: Recommendation[];
+  next_steps: string[];
+}
 
 export const AshAiAssistantPage: React.FC = () => {
   const [recommendations, setRecommendations] = useState<RecommendationResponse | null>(null);

@@ -7,9 +7,37 @@
  */
 
 import React, { useState } from 'react';
-import { useGetRecommendations, type QuestionnaireRequest } from '../hooks/useAPI';
+import { useMutation } from '@tanstack/react-query';
+import axios from 'axios';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+
+interface QuestionnaireRequest {
+  testing_focus: string;
+  application_metric: string | null;
+  attacks_metric: string | null;
+  use_case: string;
+  needs_automation: boolean;
+}
+
+const useGetRecommendations = () =>
+  useMutation({
+    mutationFn: async (req: QuestionnaireRequest) => {
+      try {
+        const res = await axios.post('/api/ashrai/recommend', req);
+        return res.data;
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          const msg =
+            typeof err.response?.data?.detail === 'string'
+              ? err.response.data.detail
+              : JSON.stringify(err.response?.data?.detail ?? err.message);
+          throw new Error(msg);
+        }
+        throw err;
+      }
+    },
+  });
 
 interface QuestionnaireFormProps {
   onSubmit?: (response: any) => void;
