@@ -17,7 +17,7 @@ from db.sync_metadata import SyncMetadata
 from db.system_config import SystemConfig
 from dependencies import get_redis
 from models import EndpointConfigRequest, EndpointConfigResponse, SyncStatusResponse
-from scheduler import get_scheduler, trigger_cyperf_sync_now
+from scheduler import get_scheduler
 from services.cyperf_service import validate_endpoint_connectivity
 from services.sync_service import perform_sync
 
@@ -247,109 +247,89 @@ async def get_sync_status(session: AsyncSession = Depends(get_db)) -> SyncStatus
         )
 
 
-@router.post("/sync-cyperf")
-async def trigger_manual_sync(session: AsyncSession = Depends(get_db)) -> dict:
-    """Trigger an immediate Cyperf sync (manual trigger for testing/emergency).
-
-    Queues an immediate one-time sync job outside the normal 24-hour schedule.
-    Useful for development/testing or if Cyperf was unreachable and needs immediate retry.
-
-    Returns:
-        HTTP 202 Accepted with status="sync_triggered" message
-
-    Raises:
-        HTTPException 500: If scheduler is not running and sync execution fails
-
-    Note:
-        This endpoint returns immediately (async); the actual sync happens in background.
-        To check status, call GET /admin/sync-status after sync completes.
-
-        Authentication: TODO - Add auth middleware in Phase 4
-    """
-    try:
-        settings = get_settings()
-
-        # Option B (recommended): Queue manual sync job to scheduler
-        # This ensures consistency with scheduled jobs
-        try:
-            scheduler = get_scheduler()
-            trigger_cyperf_sync_now(scheduler)
-            logger.info("Manual sync triggered via POST /admin/sync-cyperf (queued to scheduler)")
-
-            return {
-                "status": "sync_triggered",
-                "message": "Cyperf sync queued for immediate execution",
-            }
-
-        except Exception as scheduler_error:
-            # Scheduler might not be running; fall back to direct execution
-            logger.warning(f"Scheduler not available ({scheduler_error}); executing sync directly")
-
-            # Option A (fallback): Call perform_sync directly
-            await perform_sync(session=session, settings=settings)
-
-            return {
-                "status": "sync_completed",
-                "message": "Cyperf sync completed immediately (scheduler not running)",
-            }
-
-    except Exception as e:
-        logger.error(f"Error triggering manual sync: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to trigger sync: {str(e)}",
-        )
-
-
-@router.post("/sync-cyperf-now")
-async def trigger_sync_cyperf_now(
+@router.post("/sync-all")
+async def sync_all(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Trigger immediate Cyperf sync with currently configured endpoint.
+    """Trigger a full sync: apps + app types (synchronous) then CVE profiles (queued).
 
-    Validates that a CyPerf endpoint is configured in system_config before
-    queueing the job. Queues an immediate one-time sync job via APScheduler's
-    ``trigger="date"`` mechanism (fires at ``datetime.utcnow()``).
+    Execution order:
+    1. Validate endpoint is configured.
+    2. Run ``sync-cyperf-applications`` synchronously — returns counts immediately.
+    3. Queue CVE sync via APScheduler (same mechanism as ``sync-cyperf-now``).
 
-    Falls back to direct ``perform_sync()`` execution if the scheduler is
-    unavailable (e.g., during testing or if startup failed).
+    Returns a single response with apps counts already populated and a job_id
+    for the in-flight CVE sync.  The caller should poll ``GET /admin/sync-status``
+    to confirm CVE sync completion.
 
     Returns:
-        HTTP 200 with ``status="sync_queued"`` and ``job_id`` when scheduler queues job.
-        HTTP 200 with ``status="sync_completed"`` when fallback direct execution runs.
-        HTTP 400 if endpoint is not configured or is empty.
-        HTTP 500 if direct execution fallback also fails.
-
-    Note:
-        The APScheduler job is created with ``max_instances=1`` on the recurring
-        job (``cyperf_sync``). Manual jobs carry a unique id so they do not
-        conflict with the scheduled run — APScheduler prevents concurrent
-        execution across all jobs with the same function only when
-        ``max_instances`` is set per-job, not globally.
+        HTTP 200 with ``status="sync_queued"``, ``job_id``, and ``apps_synced`` counts.
+        HTTP 400 if endpoint is not configured.
+        HTTP 500 if both apps sync and CVE queue fail.
     """
-    # Step 1: Validate endpoint is configured
+    # Validate endpoint
     endpoint: str = ""
     try:
         config_value = await SystemConfig.get_value(session, "cyperf_endpoint")
         if config_value and config_value.strip():
             endpoint = config_value.strip()
     except Exception as db_exc:
-        logger.warning("DB read failed during sync-cyperf-now endpoint check: %s", db_exc)
+        logger.warning("DB read failed during sync-all endpoint check: %s", db_exc)
 
     if not endpoint:
-        # No system_config value — check env var as last resort
         env_endpoint = os.getenv("CYPERF_CONTROLLER_IP", "").strip()
         if not env_endpoint:
             raise HTTPException(
                 status_code=400,
                 detail=(
                     "Cyperf endpoint not configured. "
-                    "Visit settings to configure the endpoint before triggering a sync."
+                    "Visit settings to configure the endpoint before syncing."
                 ),
             )
         endpoint = env_endpoint
 
-    # Step 2: Queue job to scheduler (preferred path)
+    # Step 1: Apps sync (synchronous — fast, completes before returning)
+    # Use a fresh session to avoid transaction conflicts with the request session.
+    apps_synced: dict = {"app_types_count": 0, "applications_count": 0}
+    try:
+        from database import get_db_session
+        from services.cyperf_applications_service import (
+            APPLICATION_TYPES_FILE,
+            APPLICATIONS_FILE,
+            CyperfApplicationsService,
+        )
+
+        settings = get_settings()
+        service = CyperfApplicationsService(
+            controller_ip=settings.cyperf_controller_ip or endpoint,
+            username=settings.cyperf_username,
+            password=settings.cyperf_password,
+        )
+        app_types = await service.fetch_application_types()
+        apps = await service.fetch_applications()
+        service._save_to_json(APPLICATION_TYPES_FILE, app_types)
+        service._save_to_json(APPLICATIONS_FILE, apps)
+        apps_session = await get_db_session()
+        try:
+            await service.ingest_application_types(apps_session, app_types)
+            await service.ingest_applications(apps_session, apps)
+        finally:
+            await apps_session.close()
+        apps_synced = {
+            "app_types_count": len(app_types),
+            "applications_count": len(apps),
+        }
+        logger.info(
+            "sync-all: apps sync completed (%d types, %d apps)",
+            len(app_types),
+            len(apps),
+        )
+    except Exception as apps_exc:
+        # Non-fatal: log and continue to CVE sync
+        logger.error("sync-all: apps sync failed (continuing to CVE sync): %s", apps_exc)
+        apps_synced["error"] = str(apps_exc)
+
+    # Step 2: CVE sync (queued via APScheduler)
     settings = get_settings()
     try:
         from scheduler import sync_cyperf_job
@@ -360,8 +340,6 @@ async def trigger_sync_cyperf_now(
 
         job_id = f"manual_sync_{uuid4()}"
 
-        # MinimalApp stub: sync_cyperf_job only needs 'app' for the lifespan
-        # context; it immediately calls get_db_session() internally, not via app
         class _MinimalApp:
             pass
 
@@ -371,108 +349,35 @@ async def trigger_sync_cyperf_now(
             run_date=datetime.utcnow(),
             args=[_MinimalApp(), settings],
             id=job_id,
-            name="Manual Cyperf Sync",
+            name="Manual Cyperf Sync (sync-all)",
             replace_existing=False,
         )
-        logger.info(
-            "Manual Cyperf sync queued via scheduler (job_id=%s, endpoint=%s)",
-            job.id,
-            endpoint,
-        )
+        logger.info("sync-all: CVE sync queued (job_id=%s, endpoint=%s)", job.id, endpoint)
         return {
             "status": "sync_queued",
-            "message": "Cyperf sync queued for immediate execution",
+            "message": "Apps synced; CVE sync queued for immediate execution",
             "job_id": job.id,
             "endpoint": endpoint,
+            "apps_synced": apps_synced,
         }
 
     except Exception as scheduler_exc:
-        # Scheduler unavailable — fall back to direct synchronous execution
         logger.warning(
-            "Scheduler unavailable (%s); executing Cyperf sync directly",
+            "sync-all: Scheduler unavailable (%s); executing CVE sync directly",
             scheduler_exc,
         )
-
         try:
             await perform_sync(session=session, settings=settings)
-            logger.info("Manual Cyperf sync completed via direct execution (endpoint=%s)", endpoint)
             return {
                 "status": "sync_completed",
-                "message": "Cyperf sync completed immediately (scheduler not available)",
+                "message": "Apps and CVE sync completed immediately (scheduler not available)",
                 "job_id": None,
                 "endpoint": endpoint,
+                "apps_synced": apps_synced,
             }
         except Exception as sync_exc:
-            logger.error("Direct Cyperf sync execution failed: %s", sync_exc)
+            logger.error("sync-all: Direct CVE sync execution failed: %s", sync_exc)
             raise HTTPException(
                 status_code=500,
-                detail=f"Sync execution failed: {sync_exc}",
+                detail=f"Apps sync done; CVE sync failed: {sync_exc}",
             ) from sync_exc
-
-
-@router.post("/sync-cyperf-applications")
-async def sync_cyperf_applications(
-    session: AsyncSession = Depends(get_db),
-) -> dict:
-    """Manually trigger Cyperf applications and application types sync.
-
-    Fetches all applications and application types from Cyperf Controller,
-    saves them to JSON files, and ingests into the database.
-
-    Returns:
-        HTTP 202 Accepted with status message
-
-    Note:
-        This endpoint returns immediately; the actual sync happens synchronously
-        before returning.
-    """
-    try:
-        from config import get_settings
-        from services.cyperf_applications_service import (
-            CyperfApplicationsService,
-        )
-
-        settings = get_settings()
-
-        # Initialize service
-        service = CyperfApplicationsService(
-            controller_ip=settings.cyperf_controller_ip,
-            username=settings.cyperf_username,
-            password=settings.cyperf_password,
-        )
-
-        # Fetch data
-        logger.info("Fetching Cyperf applications and application types...")
-        app_types = await service.fetch_application_types()
-        apps = await service.fetch_applications()
-
-        # Save to JSON
-        logger.info("Saving to JSON files...")
-        from services.cyperf_applications_service import (
-            APPLICATION_TYPES_FILE,
-            APPLICATIONS_FILE,
-        )
-
-        service._save_to_json(APPLICATION_TYPES_FILE, app_types)
-        service._save_to_json(APPLICATIONS_FILE, apps)
-
-        # Ingest to database
-        logger.info("Ingesting into database...")
-        await service.ingest_application_types(session, app_types)
-        await service.ingest_applications(session, apps)
-
-        logger.info(f"✓ Synced {len(app_types)} app types and {len(apps)} applications")
-
-        return {
-            "status": "sync_completed",
-            "message": f"Synced {len(app_types)} app types and {len(apps)} applications",
-            "app_types_count": len(app_types),
-            "applications_count": len(apps),
-        }
-
-    except Exception as e:
-        logger.error(f"Error syncing Cyperf applications: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to sync applications: {str(e)}",
-        )

@@ -60,7 +60,10 @@ class RecommendationAgent:
         if not candidates:
             return []
 
-        user_scenario = f"{req.use_case} {req.objectives} {req.timeline}"
+        metric_context = " ".join(
+            filter(None, [req.application_metric, req.attacks_metric])
+        )
+        user_scenario = f"{req.use_case} {metric_context}".strip()
         ranked = rank_profiles_hybrid(candidates, user_scenario, top_k=3)
 
         return await self._generate_recommendations(ranked, req)
@@ -73,11 +76,11 @@ class RecommendationAgent:
         Returns empty list on backend failure (graceful degradation).
         """
         try:
-            if testing_focus == "app_performance":
+            if testing_focus == "Application Profile":
                 return await self._get_apps()
-            elif testing_focus == "security_attacks":
+            elif testing_focus == "Security / Attacks":
                 return await self._get_strikes()
-            else:  # both — fetch in parallel on cold start
+            else:  # Both — fetch in parallel on cold start
                 apps, strikes = await asyncio.gather(
                     self._get_apps(),
                     self._get_strikes(),
@@ -166,14 +169,20 @@ class RecommendationAgent:
         profile_label = (
             "application profile" if profile.profile_type == "application" else "strike"
         )
+        metric_line = ""
+        if req.application_metric:
+            metric_line += f"Application metric: {req.application_metric}\n"
+        if req.attacks_metric:
+            metric_line += f"Attacks metric: {req.attacks_metric}\n"
+        automation_line = "Automation needed: yes\n" if req.needs_automation else ""
         prompt = (
             f"You are a network testing expert. In 2-3 concise sentences, explain why "
             f"the Cyperf {profile_label} named '{profile.profile_name}' is a good fit "
             f"for this L4-7 test scenario:\n\n"
             f"Use case: {req.use_case}\n"
-            f"Objectives: {req.objectives}\n"
-            f"Timeline: {req.timeline}\n\n"
-            f"Be specific to the profile name and scenario. No generic advice."
+            f"{metric_line}"
+            f"{automation_line}"
+            f"\nBe specific to the profile name and scenario. No generic advice."
         )
         response = await asyncio.to_thread(
             self.model.generate_content,

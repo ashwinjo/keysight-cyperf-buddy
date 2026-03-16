@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,47 +6,47 @@
 
 @layer base {
   body {
-    background-color: #111111;
-    color: #FFFFFF;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+    background-color: #0d1117;
+    color: #e6edf3;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: Georgia, Garamond, serif;
-    letter-spacing: 0.05em;
-    color: #FFFFFF;
+    font-family: 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
+    letter-spacing: 0.03em;
+    color: #e6edf3;
   }
 }
 
 @layer components {
   .btn-luxury-primary {
-    @apply px-6 py-3 bg-keysight-red text-white font-medium tracking-luxury uppercase text-xs
-           transition-all duration-200 hover:bg-red-700 active:scale-95 shadow-elegant;
+    @apply px-6 py-3 bg-luxury-accent text-luxury-bg font-semibold tracking-luxury uppercase text-xs
+           transition-all duration-200 hover:bg-luxury-accent-alt active:scale-95 shadow-elegant rounded-md;
   }
 
   .btn-luxury-secondary {
-    @apply px-6 py-3 bg-gray-900 border border-gray-700 text-gray-300 font-medium
-           tracking-luxury uppercase text-xs transition-all duration-200 hover:border-keysight-red
-           hover:text-keysight-red shadow-elegant;
+    @apply px-6 py-3 bg-luxury-bg-subtle border border-luxury-border text-luxury-text-secondary font-medium
+           tracking-luxury uppercase text-xs transition-all duration-200 hover:border-luxury-accent
+           hover:text-luxury-accent shadow-elegant rounded-md;
   }
 
   .input-luxury {
-    @apply bg-gray-900 border border-gray-700 text-white placeholder:text-gray-500
-           px-4 py-3 tracking-tight transition-all duration-200 focus:border-keysight-red focus:ring-1
-           focus:ring-keysight-red focus:outline-none;
+    @apply bg-luxury-bg-subtle border border-luxury-border text-luxury-text placeholder:text-luxury-text-secondary
+           px-4 py-3 tracking-tight transition-all duration-200 rounded-md
+           focus:border-luxury-accent focus:ring-1 focus:ring-luxury-accent focus:outline-none;
   }
 
   .card-luxury {
-    @apply bg-gray-900 border border-gray-800 rounded-lg p-6 shadow-elegant
-           transition-all duration-300 hover:shadow-elegant-lg hover:border-keysight-red;
+    @apply bg-luxury-bg-subtle border border-luxury-border rounded-lg p-6 shadow-elegant
+           transition-all duration-300 hover:shadow-cyan hover:border-luxury-accent;
   }
 
   .divider-luxury {
-    @apply border-t border-gray-800;
+    @apply border-t border-luxury-border;
   }
 }
 
-/* Refined animations */
+/* Animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;

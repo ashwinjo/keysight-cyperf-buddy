@@ -17,8 +17,8 @@ else
   echo "    No .frontend.pid found; frontend may not be running."
 fi
 
-# ── Stop backend containers ────────────────────────────────────────────────────
-echo "==> Stopping backend containers..."
-docker compose -f "$SCRIPT_DIR/docker-compose.yml" down
+# ── Stop backend containers (preserve postgres) ────────────────────────────────
+echo "==> Stopping redis, api, agent containers (postgres preserved)..."
+docker compose -f "$SCRIPT_DIR/docker-compose.yml" stop redis api agent
 
 echo "All services stopped."

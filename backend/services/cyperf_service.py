@@ -7,6 +7,7 @@ No direct HTTP calls for sync — all Cyperf communication goes through cyperf.A
 Connectivity validation for the admin config endpoint uses httpx with a 5-second timeout.
 """
 
+import asyncio
 import json
 import logging
 import socket
@@ -205,6 +206,19 @@ class CyperfService:
     async def fetch_cve_strike_mappings(self) -> StrikeFetchResult:
         """Fetch all CVE→Strike mappings and AI-type strikes from Cyperf.
 
+        The cyperf-api-wrapper client is synchronous (urllib3-based). Dispatching
+        to a thread via asyncio.to_thread() keeps the uvicorn event loop free to
+        serve health checks and API requests while the blocking I/O runs.
+
+        Raises:
+            CyperfConnectionError: If connection to controller fails or times out
+            CyperfAPIError: If API returns 401/403 or another unexpected HTTP error
+        """
+        return await asyncio.to_thread(self._fetch_cve_strike_mappings_sync)
+
+    def _fetch_cve_strike_mappings_sync(self) -> StrikeFetchResult:
+        """Blocking implementation — runs in a thread pool via asyncio.to_thread().
+
         Uses ApplicationResourcesApi.get_resources_strikes() with skip/take=500 batching.
         Extracts CVE IDs from strike.get("Metadata", {}).get("References", [])
         where Type="CVE". Strikes that complete the references loop with no
@@ -217,10 +231,6 @@ class CyperfService:
                 When one CVE maps to multiple strikes, the last strike processed wins.
               - ai_strikes: list of AIStrikeRecord for no-CVE strikes (AI attacks,
                 protocol fuzzing, etc.) with synthetic deterministic IDs.
-
-        Raises:
-            CyperfConnectionError: If connection to controller fails or times out
-            CyperfAPIError: If API returns 401/403 or another unexpected HTTP error
         """
         cve_mappings: dict[str, str] = {}
         ai_strikes: list[AIStrikeRecord] = []

@@ -6,10 +6,11 @@ from pydantic import BaseModel, Field
 
 
 class L47ScenarioRequest(BaseModel):
-    testing_focus: Literal["app_performance", "security_attacks", "both"]
+    testing_focus: Literal["Application Profile", "Security / Attacks", "Both"]
+    application_metric: str | None = Field(default=None, max_length=500)
+    attacks_metric: str | None = Field(default=None, max_length=500)
     use_case: str = Field(..., min_length=10, max_length=1000)
-    objectives: str = Field(..., min_length=10, max_length=1000)
-    timeline: str = Field(..., min_length=5, max_length=200)
+    needs_automation: bool = Field(default=False)
 
 
 class Recommendation(BaseModel):

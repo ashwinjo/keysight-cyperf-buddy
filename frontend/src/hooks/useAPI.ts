@@ -124,6 +124,21 @@ export const useSyncStatus = () => {
   });
 };
 
+// Hook 4b: Fetch CyPerf endpoint configuration
+export const useCyperfEndpoint = () => {
+  return useQuery({
+    queryKey: ['admin', 'cyperf-endpoint'],
+    queryFn: async () => {
+      const res = await axios.get<{ endpoint: string; is_valid: boolean }>(
+        '/admin/config/cyperf-endpoint'
+      );
+      return res.data.endpoint || null;
+    },
+    staleTime: 1000 * 30,            // 30 seconds — same poll cadence as Navigation
+    refetchInterval: 1000 * 30,
+  });
+};
+
 // Hook 5: Fetch Cyperf application types
 export const useCyperfApplicationTypes = () => {
   return useQuery({
@@ -152,75 +167,14 @@ export const useCyperfApplications = () => {
   });
 };
 
-// Hook 7: Mutation for AshRAI questionnaire recommendations
-export interface QuestionnaireRequest {
-  testing_focus: 'Application Profile' | 'Security / Attacks' | 'Both';
-  application_metric?: string | null;
-  attacks_metric?: string | null;
-  use_case: string;
-  needs_automation: boolean;
-}
-
-export interface Recommendation {
-  title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
-  category: 'configuration' | 'metrics' | 'automation' | 'topology' | 'validation';
-}
-
-export interface RecommendationResponse {
-  success: boolean;
-  message: string;
-  testing_focus: string;
-  recommendations: Recommendation[];
-  next_steps: string[];
-}
-
-export const useGetRecommendations = () => {
-  return useMutation({
-    mutationFn: async (questions: QuestionnaireRequest) => {
-      try {
-        const res = await axios.post<RecommendationResponse>(
-          `${API_BASE}/ashrai/recommend`,
-          questions
-        );
-        return res.data;
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response) {
-          const detail = err.response.data?.detail;
-          // detail may be a string (HTTPException) or array (Pydantic ValidationError
-          // before the app-level handler normalises it).  Handle both to be safe.
-          let message: string;
-          if (typeof detail === 'string') {
-            message = detail;
-          } else if (Array.isArray(detail)) {
-            message = detail
-              .map((d: { loc?: unknown[]; msg?: string }) => {
-                const loc = (d.loc ?? [])
-                  .filter((part) => part !== 'body')
-                  .join(' -> ');
-                return loc ? `${loc}: ${d.msg ?? 'invalid value'}` : (d.msg ?? 'invalid value');
-              })
-              .join('; ');
-          } else {
-            message = `Request failed with status ${err.response.status}`;
-          }
-          throw new Error(message);
-        }
-        // Re-throw non-Axios errors (network down, etc.) unchanged
-        throw err;
-      }
-    },
-  });
-};
-
 // ─── L4-7 Test Advisor ────────────────────────────────────────────────────────
 
 export interface L47ScenarioRequest {
-  testing_focus: 'app_performance' | 'security_attacks' | 'both';
+  testing_focus: 'Application Profile' | 'Security / Attacks' | 'Both';
+  application_metric?: string;
+  attacks_metric?: string;
   use_case: string;
-  objectives: string;
-  timeline: string;
+  needs_automation: boolean;
 }
 
 export interface L47Recommendation {

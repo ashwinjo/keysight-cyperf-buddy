@@ -1,14 +1,13 @@
 /**
  * L47ScenarioForm Component
  *
- * 4-field controlled form for the L4-7 Test Advisor.
- * Submits to the Phase 6 agent service via useGetL47Recommendations mutation.
- *
- * Fields:
- *   - testing_focus: select (app_performance | security_attacks | both)
+ * 5-field controlled form for the L4-7 Test Advisor, mirroring the AshRAI
+ * questionnaire structure:
+ *   - testing_focus: select (Application Profile | Security / Attacks | Both)
+ *   - application_metric: text input — shown when testing_focus includes apps
+ *   - attacks_metric: text input — shown when testing_focus includes attacks
  *   - use_case: textarea (min 10 chars)
- *   - objectives: textarea (min 10 chars)
- *   - timeline: text input (min 5 chars)
+ *   - needs_automation: checkbox
  *
  * Dark luxury-* theme throughout. No light-theme CSS classes.
  */
@@ -24,16 +23,23 @@ interface L47ScenarioFormProps {
   onSubmit: (response: L47RecommendationResponse) => void;
 }
 
-type TestingFocus = 'app_performance' | 'security_attacks' | 'both';
+type TestingFocus = 'Application Profile' | 'Security / Attacks' | 'Both';
+
+const inputClass =
+  'bg-luxury-bg border border-luxury-border text-luxury-text rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-luxury-accent placeholder:text-luxury-text-secondary/50';
 
 export const L47ScenarioForm: React.FC<L47ScenarioFormProps> = ({ onSubmit }) => {
-  const [testingFocus, setTestingFocus] = useState<TestingFocus>('app_performance');
+  const [testingFocus, setTestingFocus] = useState<TestingFocus>('Application Profile');
+  const [applicationMetric, setApplicationMetric] = useState('');
+  const [attacksMetric, setAttacksMetric] = useState('');
   const [useCase, setUseCase] = useState('');
-  const [objectives, setObjectives] = useState('');
-  const [timeline, setTimeline] = useState('');
+  const [needsAutomation, setNeedsAutomation] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const mutation = useGetL47Recommendations();
+
+  const showAppMetric = testingFocus === 'Application Profile' || testingFocus === 'Both';
+  const showAttacksMetric = testingFocus === 'Security / Attacks' || testingFocus === 'Both';
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -41,16 +47,14 @@ export const L47ScenarioForm: React.FC<L47ScenarioFormProps> = ({ onSubmit }) =>
 
     const errors: string[] = [];
 
+    if (showAppMetric && !applicationMetric.trim()) {
+      errors.push('Application metric is required for Application Profile testing');
+    }
+    if (showAttacksMetric && !attacksMetric.trim()) {
+      errors.push('Attacks metric is required for Security / Attacks testing');
+    }
     if (!useCase.trim() || useCase.trim().length < 10) {
       errors.push('Use case must be at least 10 characters');
-    }
-
-    if (!objectives.trim() || objectives.trim().length < 10) {
-      errors.push('Objectives must be at least 10 characters');
-    }
-
-    if (!timeline.trim() || timeline.trim().length < 5) {
-      errors.push('Timeline must be at least 5 characters');
     }
 
     if (errors.length > 0) {
@@ -61,15 +65,12 @@ export const L47ScenarioForm: React.FC<L47ScenarioFormProps> = ({ onSubmit }) =>
     const request: L47ScenarioRequest = {
       testing_focus: testingFocus,
       use_case: useCase,
-      objectives: objectives,
-      timeline: timeline,
+      needs_automation: needsAutomation,
+      ...(showAppMetric && { application_metric: applicationMetric }),
+      ...(showAttacksMetric && { attacks_metric: attacksMetric }),
     };
 
-    mutation.mutate(request, {
-      onSuccess: (data) => {
-        onSubmit(data);
-      },
-    });
+    mutation.mutate(request, { onSuccess: (data) => onSubmit(data) });
   };
 
   return (
@@ -85,14 +86,57 @@ export const L47ScenarioForm: React.FC<L47ScenarioFormProps> = ({ onSubmit }) =>
         <select
           id="testing_focus"
           value={testingFocus}
-          onChange={(e) => setTestingFocus(e.target.value as TestingFocus)}
-          className="bg-luxury-bg border border-luxury-border text-luxury-text rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-luxury-accent"
+          onChange={(e) => {
+            setTestingFocus(e.target.value as TestingFocus);
+            setValidationErrors([]);
+          }}
+          className={inputClass}
         >
-          <option value="app_performance">Application Performance</option>
-          <option value="security_attacks">Security / Attacks</option>
-          <option value="both">Both</option>
+          <option value="Application Profile">Application Profile</option>
+          <option value="Security / Attacks">Security / Attacks</option>
+          <option value="Both">Both</option>
         </select>
       </div>
+
+      {/* Application Metric — conditional */}
+      {showAppMetric && (
+        <div className="space-y-2">
+          <label
+            htmlFor="application_metric"
+            className="block text-sm font-semibold text-luxury-text tracking-luxury"
+          >
+            Application Metric <span className="text-red-400">*</span>
+          </label>
+          <input
+            id="application_metric"
+            type="text"
+            placeholder="e.g., throughput, concurrent sessions, latency"
+            value={applicationMetric}
+            onChange={(e) => setApplicationMetric(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+      )}
+
+      {/* Attacks Metric — conditional */}
+      {showAttacksMetric && (
+        <div className="space-y-2">
+          <label
+            htmlFor="attacks_metric"
+            className="block text-sm font-semibold text-luxury-text tracking-luxury"
+          >
+            Attacks Metric <span className="text-red-400">*</span>
+          </label>
+          <input
+            id="attacks_metric"
+            type="text"
+            placeholder="e.g., attack throughput, DDoS packets per second, CVE coverage"
+            value={attacksMetric}
+            onChange={(e) => setAttacksMetric(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+      )}
 
       {/* Use Case */}
       <div className="space-y-2">
@@ -108,44 +152,25 @@ export const L47ScenarioForm: React.FC<L47ScenarioFormProps> = ({ onSubmit }) =>
           value={useCase}
           onChange={(e) => setUseCase(e.target.value)}
           rows={4}
-          className="bg-luxury-bg border border-luxury-border text-luxury-text rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-luxury-accent resize-none placeholder:text-luxury-text-secondary/50"
+          className={`${inputClass} resize-none`}
         />
       </div>
 
-      {/* Objectives */}
-      <div className="space-y-2">
-        <label
-          htmlFor="objectives"
-          className="block text-sm font-semibold text-luxury-text tracking-luxury"
-        >
-          Objectives <span className="text-red-400">*</span>
-        </label>
-        <textarea
-          id="objectives"
-          placeholder="e.g., Measure max concurrent sessions, validate 99th percentile latency < 50 ms under 10 Gbps load"
-          value={objectives}
-          onChange={(e) => setObjectives(e.target.value)}
-          rows={4}
-          className="bg-luxury-bg border border-luxury-border text-luxury-text rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-luxury-accent resize-none placeholder:text-luxury-text-secondary/50"
-        />
-      </div>
-
-      {/* Timeline */}
-      <div className="space-y-2">
-        <label
-          htmlFor="timeline"
-          className="block text-sm font-semibold text-luxury-text tracking-luxury"
-        >
-          Timeline <span className="text-red-400">*</span>
-        </label>
+      {/* Needs Automation */}
+      <div className="flex items-center gap-3">
         <input
-          id="timeline"
-          type="text"
-          placeholder="e.g., 2-week sprint, end of Q2, before production cutover"
-          value={timeline}
-          onChange={(e) => setTimeline(e.target.value)}
-          className="bg-luxury-bg border border-luxury-border text-luxury-text rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-luxury-accent placeholder:text-luxury-text-secondary/50"
+          id="needs_automation"
+          type="checkbox"
+          checked={needsAutomation}
+          onChange={(e) => setNeedsAutomation(e.target.checked)}
+          className="h-4 w-4 rounded border-luxury-border bg-luxury-bg accent-luxury-accent cursor-pointer"
         />
+        <label
+          htmlFor="needs_automation"
+          className="text-sm font-semibold text-luxury-text tracking-luxury cursor-pointer"
+        >
+          I need automation support for this test workflow
+        </label>
       </div>
 
       {/* Client Validation Errors */}
@@ -182,7 +207,7 @@ export const L47ScenarioForm: React.FC<L47ScenarioFormProps> = ({ onSubmit }) =>
         {mutation.isPending ? (
           <span className="flex items-center justify-center gap-2">
             <span
-              className="animate-spin rounded-full h-4 w-4 border-2 border-luxury-accent border-t-transparent"
+              className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"
               aria-hidden="true"
             />
             Analyzing scenario...

@@ -1,26 +1,23 @@
 /**
- * SyncButton — navbar component for triggering manual CyPerf data sync.
+ * SyncButton — navbar component for triggering a full CyPerf data sync.
  *
- * Calls POST /admin/sync-cyperf-now and displays status feedback:
- *   idle    → "Sync Data" (outline button)
- *   loading → spinning loader + "Syncing..." (polling active via useSyncPolling)
+ * Calls POST /admin/sync-all which:
+ *   1. Syncs apps + app types synchronously (counts returned immediately)
+ *   2. Queues CVE sync via APScheduler (polled via useSyncPolling)
+ *
+ * States:
+ *   idle    → "Sync Data"
+ *   loading → "Syncing..." (apps done inline; CVE polling active)
  *   success → green checkmark + "Synced" (resets after 3s)
  *   error   → red alert icon + error message (resets after 5s)
  *
- * Toast notifications fired for all state transitions via sonner.
- * Button is disabled when no endpoint is configured or during loading.
- * Displays last sync timestamp inline when provided (idle state only).
- *
- * Polling lifecycle:
- *   1. User clicks → POST /admin/sync-cyperf-now
- *   2. If response.status === "sync_queued": start useSyncPolling
- *   3. Polling hits terminal state (success/failed) → show toast, update UI
- *   4. If response.status === "sync_completed": immediate success (no polling needed)
+ * Success toast: "Synced — 1,708 CVEs · 330 app types · 567 apps"
  */
 import { useState, useEffect, useRef } from "react";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSyncPolling } from "../../hooks/useSyncPolling";
 
 type SyncButtonStatus = "idle" | "loading" | "success" | "error";
@@ -41,9 +38,12 @@ export function SyncButton({
   const [status, setStatus] = useState<SyncButtonStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [pollActive, setPollActive] = useState(false);
+  const queryClient = useQueryClient();
 
   // Track the active loading toast ID so we can dismiss it on completion
   const loadingToastRef = useRef<string | number | undefined>(undefined);
+  // Apps sync counts from the initial POST response — combined into CVE success toast
+  const appsSyncedRef = useRef<{ app_types_count: number; applications_count: number } | null>(null);
 
   const {
     syncStatus,
@@ -62,11 +62,24 @@ export function SyncButton({
         loadingToastRef.current = undefined;
       }
       const cveCount = syncStatus.cves_extracted;
-      const successMsg =
-        cveCount !== undefined && cveCount !== null
-          ? `Sync completed — ${cveCount.toLocaleString()} CVEs extracted`
-          : "Sync completed successfully";
+      const apps = appsSyncedRef.current;
+      let successMsg = "Sync completed";
+      const parts: string[] = [];
+      if (cveCount !== undefined && cveCount !== null) {
+        parts.push(`${cveCount.toLocaleString()} CVEs`);
+      }
+      if (apps) {
+        parts.push(`${apps.app_types_count} app types`);
+        parts.push(`${apps.applications_count} apps`);
+      }
+      if (parts.length > 0) {
+        successMsg = `Sync completed — ${parts.join(" · ")}`;
+      }
       toast.success(successMsg);
+      // Refresh apps tables so they reflect the newly synced data
+      void queryClient.invalidateQueries({ queryKey: ["cyperf", "applications"] });
+      void queryClient.invalidateQueries({ queryKey: ["cyperf", "application-types"] });
+      appsSyncedRef.current = null;
       setStatus("success");
       setPollActive(false);
       onSyncComplete?.(true);
@@ -111,10 +124,11 @@ export function SyncButton({
 
     setStatus("loading");
     setError(null);
+    appsSyncedRef.current = null;
     resetPolling();
     onSyncStart?.();
 
-    const toastId = toast.loading("Starting CyPerf sync...");
+    const toastId = toast.loading("Syncing apps + CVEs from CyPerf…");
     loadingToastRef.current = toastId;
 
     try {
@@ -122,21 +136,34 @@ export function SyncButton({
         status: "sync_queued" | "sync_completed";
         message: string;
         job_id?: string;
-      }>("/admin/sync-cyperf-now");
+        apps_synced?: { app_types_count: number; applications_count: number };
+      }>("/admin/sync-all");
 
       const data = res.data;
 
+      // Store apps counts for use in the final success toast
+      if (data.apps_synced) {
+        appsSyncedRef.current = data.apps_synced;
+      }
+
       if (data.status === "sync_queued") {
-        // Update loading toast message
-        toast.loading("Sync queued — polling for completion...", { id: toastId });
+        const appMsg = data.apps_synced
+          ? `Apps done (${data.apps_synced.app_types_count} types · ${data.apps_synced.applications_count} apps) — polling for CVEs…`
+          : "Sync queued — polling for completion…";
+        toast.loading(appMsg, { id: toastId });
         loadingToastRef.current = toastId;
-        // Activate polling — useSyncPolling will take it from here
         setPollActive(true);
       } else if (data.status === "sync_completed") {
-        // Immediate completion (no polling needed)
         toast.dismiss(toastId);
         loadingToastRef.current = undefined;
-        toast.success(`Sync completed — ${data.message}`);
+        const apps = data.apps_synced;
+        const parts = apps
+          ? [`${apps.app_types_count} app types`, `${apps.applications_count} apps`]
+          : [];
+        toast.success(`Sync completed — ${[data.message, ...parts].join(" · ")}`);
+        void queryClient.invalidateQueries({ queryKey: ["cyperf", "applications"] });
+        void queryClient.invalidateQueries({ queryKey: ["cyperf", "application-types"] });
+        appsSyncedRef.current = null;
         setStatus("success");
         onSyncComplete?.(true);
         setTimeout(() => setStatus("idle"), 3000);

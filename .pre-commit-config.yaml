@@ -18,7 +18,7 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args:
-          - --maxkb=500
+          - --maxkb=2048
       - id: trailing-whitespace
       - id: end-of-file-fixer
       # Disabled during initial setup; re-enable after branching strategy is established

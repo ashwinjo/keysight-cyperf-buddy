@@ -22,6 +22,12 @@ export const L47AdvisorPage: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      {/* Work in Progress banner */}
+      <div className="flex items-center gap-3 px-4 py-3 rounded-md bg-red-950/50 border border-red-700/60 text-red-400">
+        <span className="text-xs font-bold tracking-widest uppercase">⚠ Work in Progress</span>
+        <span className="text-xs text-red-400/70">This feature is under active development and may not function as expected.</span>
+      </div>
+
       {/* Page header — always visible */}
       <div className="space-y-2">
         <h1 className="text-4xl font-display font-bold text-luxury-text tracking-luxury">

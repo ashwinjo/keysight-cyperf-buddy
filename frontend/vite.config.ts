@@ -6,9 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5174,
-    // Allow ALL hosts - disable host validation completely
-    // Use array with single empty string to accept any host
-    allowedHosts: [""],
+    host: true, // bind to 0.0.0.0 so ngrok/external connections reach the dev server
+    allowedHosts: ["0992-192-25-52-194.ngrok-free.app", ""],
     proxy: {
       "/api/l47": {
         target: "http://localhost:8001",

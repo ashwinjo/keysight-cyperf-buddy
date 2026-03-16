@@ -66,6 +66,24 @@ async def recommend(
     Always returns HTTP 200. Returns empty recommendations with a plain-language
     message when no matching profiles are found or if the backend is unreachable.
     """
+    if (
+        body.testing_focus in ("Application Profile", "Both")
+        and not body.application_metric
+    ):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": "application_metric is required when testing_focus includes Application Profile"
+            },
+        )
+    if body.testing_focus in ("Security / Attacks", "Both") and not body.attacks_metric:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": "attacks_metric is required when testing_focus includes Security / Attacks"
+            },
+        )
+
     agent: RecommendationAgent = request.app.state.agent
     try:
         recommendations = await agent.recommend(body)

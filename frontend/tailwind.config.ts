@@ -12,48 +12,50 @@ const config: Config = {
           900: "#0D1117",
           950: "#010409",
         },
-        // Keysight brand palette
+        // Keysight brand palette — red kept for fallback, cyan mapped as primary
         keysight: {
-          red: "#EF3B39",           // Keysight Red (primary accent)
-          gray: "#4A4A4A",          // Keysight Gray (dark)
-          "gray-medium": "#9C9C9C", // Keysight Medium Gray
-          "gray-light": "#D3D3D3",  // Keysight Light Gray
-          black: "#000000",         // Black
-          white: "#FFFFFF",         // White
+          red: "#22d3ee",           // Remapped → IxNetwork cyan accent
+          gray: "#4A4A4A",
+          "gray-medium": "#8b949e",
+          "gray-light": "#c9d1d9",
+          black: "#010409",
+          white: "#e6edf3",
         },
-        // Alias for backward compatibility - refined dark theme
+        // Semantic design tokens — IxNetwork dark theme
         luxury: {
-          bg: "#111111",            // Deep charcoal (refined, not pure black)
-          "bg-subtle": "#1f1f1f",   // Subtle charcoal
-          border: "#2a2a2a",        // Dark gray border
-          text: "#FFFFFF",          // White text
-          "text-secondary": "#B8B8B8", // Light gray text
-          accent: "#EF3B39",        // Keysight Red (primary)
-          "accent-alt": "#666666",  // Gray secondary
+          bg: "#0d1117",            // GitHub-dark navy
+          "bg-subtle": "#161b22",   // Slightly elevated surface
+          border: "#21262d",        // Subtle border
+          text: "#e6edf3",          // Near-white
+          "text-secondary": "#8b949e", // Muted gray
+          accent: "#22d3ee",        // Cyan-400 (IxNetwork teal)
+          "accent-alt": "#0891b2",  // Cyan-600 (hover / pressed)
         },
       },
       fontFamily: {
-        display: ["Georgia", "Garamond", "serif"],
+        // Monospace display font — matches IxNetwork hero heading style
+        display: ["'JetBrains Mono'", "Menlo", "Monaco", "'Courier New'", "monospace"],
         sans: [
+          "Inter",
           "-apple-system",
           "BlinkMacSystemFont",
           "Segoe UI",
-          "Helvetica Neue",
           "sans-serif",
         ],
         mono: [
+          "'JetBrains Mono'",
           "Menlo",
           "Monaco",
-          "Courier New",
           "monospace",
         ],
       },
       letterSpacing: {
-        luxury: "0.05em",
+        luxury: "0.03em",
       },
       boxShadow: {
-        elegant: "0 2px 8px rgba(0, 0, 0, 0.3)",
-        "elegant-lg": "0 8px 24px rgba(0, 0, 0, 0.4)",
+        elegant: "0 2px 8px rgba(0, 0, 0, 0.5)",
+        "elegant-lg": "0 8px 32px rgba(0, 0, 0, 0.6)",
+        cyan: "0 0 16px rgba(34, 211, 238, 0.15)",
       },
     },
   },

@@ -235,14 +235,7 @@ export default function SearchPage() {
             )}
 
             <div className="pt-4 border-t border-luxury-border flex gap-3">
-              {cveResult.testable ? (
-                <button
-                  onClick={() => openSidebar('discuss')}
-                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold rounded transition-colors"
-                >
-                  Let's Discuss
-                </button>
-              ) : (
+              {!cveResult.testable && (
                 <button
                   onClick={() => openSidebar('feature_request')}
                   className="px-4 py-2 bg-luxury-bg-subtle hover:bg-luxury-accent/10 border border-luxury-accent/40 text-luxury-accent text-sm font-semibold rounded transition-colors"

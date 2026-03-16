@@ -10,8 +10,14 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # ── Backend ────────────────────────────────────────────────────────────────────
-echo "==> Starting backend containers (postgres, redis, api)..."
-docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d --build --wait
+if docker ps --filter "name=cyperf_db" --filter "status=running" -q | grep -q .; then
+  echo "==> Postgres already running — skipping (preserving data)..."
+  echo "==> Starting redis, api, agent containers..."
+  docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d --build --wait --no-deps redis api agent
+else
+  echo "==> Starting all backend containers (postgres, redis, api, agent)..."
+  docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d --build --wait postgres redis api agent
+fi
 
 # ── Health verification ────────────────────────────────────────────────────────
 echo "==> Verifying API health endpoint..."
@@ -33,7 +39,7 @@ done
 echo "==> Starting frontend dev server..."
 cd "$SCRIPT_DIR/frontend"
 npm install --silent
-npm run dev &
+npm run dev -- --host 0.0.0.0 &
 FRONTEND_PID=$!
 echo "$FRONTEND_PID" > "$SCRIPT_DIR/.frontend.pid"
 

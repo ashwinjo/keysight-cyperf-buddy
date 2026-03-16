@@ -122,8 +122,11 @@ class NVDClient:
         string representation to detect 429/403 rate-limit scenarios.
         """
         exc_str = str(exc).lower()
-        if any(signal in exc_str for signal in ("429", "403", "rate limit", "too many")):
-            logger.warning("NVD rate limit hit for: %s", context)
+        # NVD returns 404 as a spurious rate-limit signal — "CVE not found" is always
+        # returned as HTTP 200 with empty results, never as 404. Treat NVD 404 as
+        # retryable in the same way as 429/403.
+        if any(signal in exc_str for signal in ("429", "403", "404", "rate limit", "too many")):
+            logger.warning("NVD rate limit (or transient 404) hit for: %s", context)
             raise NVDRateLimitError(f"NVD API rate limited while fetching: {context}") from exc
         # Unknown error — re-raise with context but do not swallow
         logger.error("NVD API error for %s: %s", context, exc, exc_info=True)
@@ -220,7 +223,7 @@ def extract_cve_fields(nvd_cve: object) -> dict:
 
 @retry(
     retry=retry_if_exception_type(NVDRateLimitError),
-    wait=wait_exponential(multiplier=2, min=2, max=30) + wait_random(0, 2),
+    wait=wait_exponential(multiplier=10, min=10, max=35) + wait_random(0, 5),
     stop=stop_after_attempt(3),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
