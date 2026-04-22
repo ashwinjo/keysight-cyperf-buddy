@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyPerf Deployment Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            luxury: {
+              bg:               '#0d1117',
+              'bg-subtle':      '#161b22',
+              border:           '#21262d',
+              text:             '#e6edf3',
+              'text-secondary': '#8b949e',
+              accent:           '#22d3ee',
+              'accent-alt':     '#0891b2',
+            },
+          },
+          fontFamily: {
+            display: ["'JetBrains Mono'", 'Menlo', 'Monaco', "'Courier New'", 'monospace'],
+            sans:    ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+          },
+          letterSpacing: { luxury: '0.03em' },
+          boxShadow: {
+            elegant:      '0 2px 8px rgba(0,0,0,0.5)',
+            'elegant-lg': '0 8px 32px rgba(0,0,0,0.6)',
+            cyan:         '0 0 16px rgba(34,211,238,0.15)',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { background-color: #0d1117; color: #e6edf3; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace; letter-spacing: 0.03em; color: #e6edf3; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-in { animation: fadeInUp 0.4s ease-out; }
+    .card-luxury { background-color: #161b22; border: 1px solid #21262d; border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.5); transition: box-shadow 0.3s, border-color 0.3s; }
+    .card-luxury:hover { box-shadow: 0 0 16px rgba(34,211,238,0.15); border-color: rgba(34,211,238,0.4); }
+    pre { white-space: pre; overflow-x: auto; }
+    code { font-family: 'JetBrains Mono', Menlo, Monaco, monospace; }
+  </style>
+</head>
+<body class="min-h-screen p-6 md:p-10">
+  <div class="max-w-5xl mx-auto space-y-8 animate-in">
+
+    <!-- Hero -->
+    <div>
+      <h1 class="text-4xl font-display font-bold text-luxury-text mb-2 tracking-luxury">CyPerf Deployment Guide</h1>
+      <p class="text-luxury-text-secondary tracking-tight">Release 7.0 · First-time deployment reference — on-prem (VMware / KVM / bare metal) and cloud (AWS / Azure / GCP)</p>
+    </div>
+
+    <!-- What Is CyPerf -->
+    <div class="card-luxury space-y-3">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">What Is CyPerf?</h2>
+      <p class="text-luxury-text leading-relaxed">
+        CyPerf is a software-based network test platform that simulates real-world traffic — including attacks, encrypted sessions, and application traffic — so you can stress-test network devices and security infrastructure before they face the real thing.
+      </p>
+      <p class="text-luxury-text-secondary text-sm">
+        Think of it as a <span class="text-luxury-accent font-semibold">traffic generation engine you control entirely through a browser</span>.
+      </p>
+    </div>
+
+    <!-- Architecture -->
+    <div class="card-luxury space-y-5">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Architecture: Three Moving Parts</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="border border-luxury-border rounded-md p-4 space-y-2 hover:border-luxury-accent/40 transition-colors">
+          <div class="text-2xl">🖥️</div>
+          <h3 class="font-semibold text-luxury-text">Controller</h3>
+          <p class="text-sm text-luxury-text-secondary">Web UI — your command center for building and running tests.</p>
+          <p class="text-xs text-luxury-accent font-medium">On-prem VM or cloud</p>
+        </div>
+        <div class="border border-luxury-border rounded-md p-4 space-y-2 hover:border-luxury-accent/40 transition-colors">
+          <div class="text-2xl">⚡</div>
+          <h3 class="font-semibold text-luxury-text">Traffic Agent</h3>
+          <p class="text-sm text-luxury-text-secondary">The engine that actually generates test traffic.</p>
+          <p class="text-xs text-luxury-accent font-medium">On-prem VM, cloud, or bare metal</p>
+        </div>
+        <div class="border border-luxury-border rounded-md p-4 space-y-2 hover:border-luxury-accent/40 transition-colors">
+          <div class="text-2xl">🔗</div>
+          <h3 class="font-semibold text-luxury-text">Controller Proxy</h3>
+          <p class="text-sm text-luxury-text-secondary">A bridge for hybrid setups where agents and controller are in different networks.</p>
+          <p class="text-xs text-luxury-accent font-medium">On-prem VM or cloud</p>
+        </div>
+      </div>
+      <p class="text-sm text-luxury-text-secondary border-l-2 border-luxury-accent/30 pl-3">
+        First time? You need at minimum a <strong class="text-luxury-text">Controller</strong> and at least <strong class="text-luxury-text">two Agents</strong> — one client-side, one server-side.
+      </p>
+    </div>
+
+    <!-- Step 1: Choose Deployment Path -->
+    <div class="card-luxury space-y-5">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Step 1: Choose Your Deployment Path</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-luxury-border">
+              <th class="text-left py-2 pr-6 text-luxury-text-secondary font-semibold tracking-luxury">Environment</th>
+              <th class="text-left py-2 text-luxury-text-secondary font-semibold tracking-luxury">Deployment Method</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-luxury-border/40">
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">VMware ESXi</td><td class="py-2.5 text-luxury-text-secondary">OVA (recommended for on-prem)</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">KVM / Linux</td><td class="py-2.5 text-luxury-text-secondary">QCOW2 image</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">AWS / Azure / GCP</td><td class="py-2.5 text-luxury-text-secondary">Cloud templates (CloudFormation, ARM, Deployment Manager)</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">Kubernetes</td><td class="py-2.5 text-luxury-text-secondary">Helm / K8s manifests</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">Docker</td><td class="py-2.5 text-luxury-text-secondary">Container deployment</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">Bare metal Linux</td><td class="py-2.5 text-luxury-text-secondary">COTS .deb installer</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Option A: VMware -->
+    <div class="card-luxury space-y-5">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Option A: VMware (OVA) — Most Common On-Prem Path</h2>
+
+      <div class="space-y-4">
+        <h3 class="font-semibold text-luxury-text">Deploy the Controller</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div class="border border-luxury-border/60 rounded p-3"><div class="text-luxury-text-secondary text-xs mb-1">CPU</div><div class="text-luxury-text font-semibold">8 cores</div></div>
+          <div class="border border-luxury-border/60 rounded p-3"><div class="text-luxury-text-secondary text-xs mb-1">RAM</div><div class="text-luxury-text font-semibold">16 GB</div></div>
+          <div class="border border-luxury-border/60 rounded p-3"><div class="text-luxury-text-secondary text-xs mb-1">Storage</div><div class="text-luxury-text font-semibold">100 GB SSD (thin) / 250 GB (thick)</div></div>
+          <div class="border border-luxury-border/60 rounded p-3"><div class="text-luxury-text-secondary text-xs mb-1">NIC</div><div class="text-luxury-text font-semibold">1 (management)</div></div>
+        </div>
+        <ol class="space-y-2 text-sm text-luxury-text list-decimal list-inside">
+          <li>Download the Controller OVA from your Keysight support link.</li>
+          <li>Deploy the OVA via ESXi or vSphere client.</li>
+          <li>Confirm the management NIC is connected before powering on.</li>
+          <li>Power on — the VM will pull an IP via DHCP by default.</li>
+          <li>Navigate to <code class="text-luxury-accent bg-luxury-bg-subtle px-1 rounded">https://&lt;controller-ip&gt;</code> in your browser.</li>
+          <li>Log in with defaults: <code class="text-luxury-accent bg-luxury-bg-subtle px-1 rounded">admin</code> / <code class="text-luxury-accent bg-luxury-bg-subtle px-1 rounded">CyPerf&amp;Keysight#1</code></li>
+        </ol>
+        <div class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-sm space-y-1">
+          <p class="font-semibold text-luxury-text">Want a static IP instead of DHCP?</p>
+          <p class="text-luxury-text-secondary">Connect to the VM console and run:</p>
+          <pre class="text-luxury-accent text-xs mt-1">kcos networking ip set mgmt0 &lt;YOUR_IP&gt;/&lt;PREFIX&gt; &lt;GATEWAY_IP&gt;
+# Example:
+kcos networking ip set mgmt0 10.38.166.89/24 10.38.166.1</pre>
+        </div>
+      </div>
+
+      <div class="space-y-4 border-t border-luxury-border/40 pt-4">
+        <h3 class="font-semibold text-luxury-text">Deploy the Traffic Agent</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div class="border border-luxury-border/60 rounded p-3"><div class="text-luxury-text-secondary text-xs mb-1">CPU</div><div class="text-luxury-text font-semibold">4 cores</div></div>
+          <div class="border border-luxury-border/60 rounded p-3"><div class="text-luxury-text-secondary text-xs mb-1">RAM</div><div class="text-luxury-text font-semibold">8 GB</div></div>
+          <div class="border border-luxury-border/60 rounded p-3"><div class="text-luxury-text-secondary text-xs mb-1">Storage</div><div class="text-luxury-text font-semibold">100 GB SSD</div></div>
+          <div class="border border-luxury-border/60 rounded p-3"><div class="text-luxury-text-secondary text-xs mb-1">NICs</div><div class="text-luxury-text font-semibold">2 (management + test)</div></div>
+        </div>
+        <ol class="space-y-2 text-sm text-luxury-text list-decimal list-inside">
+          <li>Download the Agent OVA.</li>
+          <li>In vSphere: Deploy OVF/OVA → name the VM and select your OVA.</li>
+          <li>Select your datastore.</li>
+          <li><strong>Network mapping (critical):</strong>
+            <ul class="mt-1 ml-4 space-y-1 text-luxury-text-secondary list-disc">
+              <li><code class="text-luxury-accent bg-luxury-bg-subtle px-1 rounded">VM Network</code> → management vSwitch</li>
+              <li><code class="text-luxury-accent bg-luxury-bg-subtle px-1 rounded">Test_net1</code> → test traffic vSwitch</li>
+            </ul>
+          </li>
+          <li>Choose Thin disk provisioning and finish deployment.</li>
+          <li>Power on.</li>
+        </ol>
+        <div class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-sm space-y-1">
+          <p class="font-semibold text-luxury-text">After boot — configure networking via netplan:</p>
+          <p class="text-luxury-text-secondary text-xs">SSH in with <code class="text-luxury-accent">cyperf@&lt;agent-ip&gt;</code> (password: <code class="text-luxury-accent">cyperf</code>), then edit <code class="text-luxury-accent">/etc/netplan/01-netcfg.yaml</code>.</p>
+          <p class="text-xs text-amber-400/80 mt-2">Key rule: if management and test are on the same subnet, management MUST have a lower metric (100) than test (200).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Option B: KVM -->
+    <div class="card-luxury space-y-4">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Option B: KVM (QCOW2)</h2>
+      <p class="text-sm text-luxury-text-secondary">Supported host OS: <strong class="text-luxury-text">Ubuntu 22.04 or Ubuntu 24.04</strong></p>
+
+      <div class="space-y-2">
+        <p class="text-sm text-luxury-text font-semibold">1. Install prerequisites:</p>
+        <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">sudo apt update
+sudo apt -y install qemu-kvm libvirt-daemon-system libvirt-clients \
+  bridge-utils qemu-guest-agent virt-manager vim cifs-utils</pre>
+      </div>
+      <div class="space-y-2">
+        <p class="text-sm text-luxury-text font-semibold">2. Launch Controller VM:</p>
+        <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">sudo virt-install \
+  --connect qemu:///system --virt-type kvm \
+  --name cyperf-controller --ram 16384 --vcpus=8 \
+  --osinfo detect=on,require=off \
+  --disk path=/var/lib/libvirt/cyperf-mdw.qcow2,format=qcow2 \
+  --import --network bridge=br0,model=virtio --noautoconsole</pre>
+      </div>
+      <div class="space-y-2">
+        <p class="text-sm text-luxury-text font-semibold">3. Launch Agent VM:</p>
+        <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">sudo virt-install \
+  --connect qemu:///system --virt-type kvm \
+  --name cyperf-agent1 --ram 8192 --vcpus=4 \
+  --osinfo detect=on,require=off \
+  --disk path=/var/lib/libvirt/cyperf-agent1.qcow2,format=qcow2 \
+  --import --network bridge=br0 --network network=default --noautoconsole</pre>
+        <p class="text-xs text-luxury-text-secondary">Tip: if the KVM agent login console doesn't appear, press <kbd class="bg-luxury-border px-1 rounded text-luxury-text">Ctrl+Alt+F4</kbd>.</p>
+      </div>
+    </div>
+
+    <!-- Option C: Bare Metal -->
+    <div class="card-luxury space-y-4">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Option C: Bare Metal Linux (COTS Installer)</h2>
+      <p class="text-sm text-luxury-text-secondary">Supported OS: <strong class="text-luxury-text">Debian 12 Server</strong></p>
+      <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">sudo apt install /path/to/cyperf-agent-installer.deb</pre>
+      <p class="text-sm text-luxury-text-secondary">Existing <code class="text-luxury-accent">portmanager</code> config is preserved if present; otherwise defaults are used.</p>
+    </div>
+
+    <!-- Step 2: Connect Agents -->
+    <div class="card-luxury space-y-5">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Step 2: Connect Agents to the Controller</h2>
+      <div class="space-y-3">
+        <div class="space-y-1">
+          <p class="text-sm text-luxury-text font-semibold">Quickest (trusts fingerprint):</p>
+          <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">cyperfagent controller set &lt;CONTROLLER-IP&gt;</pre>
+        </div>
+        <div class="space-y-1">
+          <p class="text-sm text-luxury-text font-semibold">Recommended (explicit credentials + fingerprint):</p>
+          <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">cyperfagent controller set 10.38.166.147 \
+  --username "admin" \
+  --password "CyPerf&amp;Keysight#1" \
+  --fingerprint "SHA256:dgBd+IKW5GsN8eXec3f/Mm1XRKQmHvfM73gdcZQDdlU"</pre>
+        </div>
+        <div class="space-y-1">
+          <p class="text-sm text-luxury-text font-semibold">Interactive (guided prompts):</p>
+          <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">cyperfagent controller set 10.38.166.147 --interactive</pre>
+        </div>
+        <div class="space-y-1">
+          <p class="text-sm text-luxury-text font-semibold">Verify connection:</p>
+          <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">cyperfagent controller show</pre>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <p class="text-sm font-semibold text-luxury-text mb-2">Useful agent CLI commands:</p>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-luxury-border">
+              <th class="text-left py-2 pr-6 text-luxury-text-secondary font-semibold tracking-luxury">Command</th>
+              <th class="text-left py-2 text-luxury-text-secondary font-semibold tracking-luxury">What It Does</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-luxury-border/40 text-xs">
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2 pr-6 font-mono text-luxury-accent">cyperfagent controller show</td><td class="py-2 text-luxury-text-secondary">Show current controller connection</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2 pr-6 font-mono text-luxury-accent">cyperfagent interface management show</td><td class="py-2 text-luxury-text-secondary">Show current management interface</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2 pr-6 font-mono text-luxury-accent">cyperfagent interface management set ens160</td><td class="py-2 text-luxury-text-secondary">Set management interface explicitly</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2 pr-6 font-mono text-luxury-accent">cyperfagent interface management set auto</td><td class="py-2 text-luxury-text-secondary">Auto-detect management interface</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2 pr-6 font-mono text-luxury-accent">cyperfagent interface test set ens160</td><td class="py-2 text-luxury-text-secondary">Set test interface explicitly</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2 pr-6 font-mono text-luxury-accent">cyperfagent interface test set auto</td><td class="py-2 text-luxury-text-secondary">Auto-detect test interface</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Step 3: Fingerprint -->
+    <div class="card-luxury space-y-4">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Step 3: Get Your Controller Fingerprint</h2>
+      <ol class="space-y-2 text-sm text-luxury-text list-decimal list-inside">
+        <li>Log into the CyPerf web UI.</li>
+        <li>Go to <strong>Settings → Controller Security → Key Management</strong>.</li>
+        <li>Click <strong>Copy</strong> to copy the fingerprint string.</li>
+        <li>Use it in the <code class="text-luxury-accent bg-luxury-bg-subtle px-1 rounded">--fingerprint</code> flag when connecting agents.</li>
+      </ol>
+      <p class="text-xs text-amber-400/80 border-l-2 border-amber-400/30 pl-3">
+        Clicking <strong>Revoke server fingerprint</strong> generates a new key pair and immediately disconnects all active agents.
+      </p>
+    </div>
+
+    <!-- Hardware Reference -->
+    <div class="card-luxury space-y-5">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Hardware Reference</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-luxury-border">
+              <th class="text-left py-2 pr-6 text-luxury-text-secondary font-semibold tracking-luxury">Component</th>
+              <th class="text-left py-2 pr-6 text-luxury-text-secondary font-semibold tracking-luxury">CPU</th>
+              <th class="text-left py-2 pr-6 text-luxury-text-secondary font-semibold tracking-luxury">RAM</th>
+              <th class="text-left py-2 text-luxury-text-secondary font-semibold tracking-luxury">Storage</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-luxury-border/40">
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">Controller</td><td class="py-2.5 pr-6 text-luxury-text-secondary">8 cores</td><td class="py-2.5 pr-6 text-luxury-text-secondary">16 GB</td><td class="py-2.5 text-luxury-text-secondary">100 GB SSD (thin) / 250 GB (thick)</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">Agent</td><td class="py-2.5 pr-6 text-luxury-text-secondary">4 cores</td><td class="py-2.5 pr-6 text-luxury-text-secondary">8 GB</td><td class="py-2.5 text-luxury-text-secondary">100 GB SSD</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">Controller Proxy</td><td class="py-2.5 pr-6 text-luxury-text-secondary">2 cores</td><td class="py-2.5 pr-6 text-luxury-text-secondary">2 GB</td><td class="py-2.5 text-luxury-text-secondary">10 GB SSD</td></tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors"><td class="py-2.5 pr-6 text-luxury-text font-medium">License &amp; User Manager</td><td class="py-2.5 pr-6 text-luxury-text-secondary">2 cores</td><td class="py-2.5 pr-6 text-luxury-text-secondary">4 GB</td><td class="py-2.5 text-luxury-text-secondary">50 GB SSD</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Updating CyPerf -->
+    <div class="card-luxury space-y-4">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Updating CyPerf</h2>
+      <ol class="space-y-2 text-sm text-luxury-text list-decimal list-inside">
+        <li>Download the upgrade package from the Keysight CyPerf Support page.</li>
+        <li>Go to <strong>Settings → Software Updates</strong>.</li>
+        <li>Click <strong>Select packages for upload</strong> → choose your file → <strong>Open</strong>.</li>
+        <li>Click <strong>Upload</strong> (do not refresh the page during upload).</li>
+        <li>Click <strong>Start update</strong>.</li>
+      </ol>
+      <p class="text-xs text-amber-400/80 border-l-2 border-amber-400/30 pl-3">
+        Direct upgrade from CyPerf 6.x to 7.0 is <strong>not supported</strong> — agents must be redeployed from scratch for 7.0 (Debian base image migration).
+      </p>
+    </div>
+
+    <!-- Factory Reset -->
+    <div class="card-luxury space-y-4">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Resetting an Agent to Factory Defaults</h2>
+      <pre class="bg-luxury-bg-subtle border border-luxury-border/60 rounded p-3 text-xs text-luxury-accent">sudo cyperfagent configuration reset hard</pre>
+      <p class="text-sm text-luxury-text-secondary">Confirm with <code class="text-luxury-accent">yes</code> when prompted. All agent configuration (controller URL, interface settings) will be wiped.</p>
+    </div>
+
+    <!-- Troubleshooting -->
+    <div class="card-luxury space-y-5">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Troubleshooting Agent Connections</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-luxury-border">
+              <th class="text-left py-2 pr-4 text-luxury-text-secondary font-semibold tracking-luxury">Symptom</th>
+              <th class="text-left py-2 pr-4 text-luxury-text-secondary font-semibold tracking-luxury">Likely Cause</th>
+              <th class="text-left py-2 text-luxury-text-secondary font-semibold tracking-luxury">Fix</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-luxury-border/40">
+            <tr class="hover:bg-luxury-bg-subtle transition-colors align-top">
+              <td class="py-2.5 pr-4 text-red-400/80 font-medium">Connection status: Unauthorized</td>
+              <td class="py-2.5 pr-4 text-luxury-text-secondary">Wrong credentials or fingerprint</td>
+              <td class="py-2.5 text-luxury-text-secondary">Re-run cyperfagent controller set with correct --username, --password, --fingerprint</td>
+            </tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors align-top">
+              <td class="py-2.5 pr-4 text-red-400/80 font-medium">Controller UI shows "incorrect credentials" banner</td>
+              <td class="py-2.5 pr-4 text-luxury-text-secondary">Agent repeatedly connecting with bad creds</td>
+              <td class="py-2.5 text-luxury-text-secondary">Fix credentials on the agent side</td>
+            </tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors align-top">
+              <td class="py-2.5 pr-4 text-red-400/80 font-medium">Agent visible in SSH but not in Controller UI</td>
+              <td class="py-2.5 pr-4 text-luxury-text-secondary">Agent not yet pointed at controller</td>
+              <td class="py-2.5 text-luxury-text-secondary">Run cyperfagent controller set &lt;ip&gt;</td>
+            </tr>
+            <tr class="hover:bg-luxury-bg-subtle transition-colors align-top">
+              <td class="py-2.5 pr-4 text-red-400/80 font-medium">IPv6 address showing instead of IPv4 in UI</td>
+              <td class="py-2.5 pr-4 text-luxury-text-secondary">Known behavior</td>
+              <td class="py-2.5 text-luxury-text-secondary">Only IPv4 is displayed in Agent Management — this is expected</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Getting Help -->
+    <div class="card-luxury space-y-3">
+      <h2 class="text-xl font-display font-bold text-luxury-accent tracking-luxury">Getting Help</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div class="space-y-2">
+          <p class="font-semibold text-luxury-text">Support channels</p>
+          <ul class="space-y-1 text-luxury-text-secondary">
+            <li>US / Canada: <span class="text-luxury-text">1-888-829-5558</span> (8:00–17:00)</li>
+            <li>Europe / APAC: support.ixiacom.com</li>
+            <li>Email: <span class="text-luxury-text">support@keysight.com</span></li>
+          </ul>
+        </div>
+        <div class="space-y-2">
+          <p class="font-semibold text-luxury-text">Security vulnerabilities</p>
+          <p class="text-luxury-text-secondary">Visit support portal → <strong>Product &amp; Solution Cyber Security → Report an Issue</strong></p>
+        </div>
+      </div>
+      <p class="text-xs text-luxury-text-secondary border-t border-luxury-border/40 pt-3">© Keysight Technologies 2020–2025 · CyPerf Release 7.0</p>
+    </div>
+
+  </div><!-- /max-w -->
+</body>
+</html>
